@@ -1,0 +1,120 @@
+// Phase 1 MVP DB 스키마 (시니어 골프 투어 플랫폼)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProcessedStatus {
+  pending
+  in_progress
+  done
+  failed
+}
+
+enum ChatRole {
+  user
+  assistant
+}
+
+enum BookingStatus {
+  pending
+  contacted
+  confirmed
+  cancelled
+}
+
+model User {
+  id               String   @id @default(cuid())
+  kakaoId          String?  @unique @map("kakao_id")
+  name             String?
+  email            String?  @unique
+  phone            String?
+  signupCompleted  Boolean  @default(false) @map("signup_completed")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  bookings     Booking[]
+  chatSessions ChatSession[]
+
+  @@map("users")
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  destination   String
+  golfCourse    String?  @map("golf_course")
+  departureDate DateTime @map("departure_date") @db.Date
+  nights        Int
+  price         Int
+  included      String[]
+  excluded      String[]
+  capacity      Int
+  deadline      DateTime? @db.Date
+  sourceUrl     String?  @map("source_url")
+  rawText       String?  @map("raw_text") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  bookings Booking[]
+
+  @@index([destination, departureDate, capacity, nights])
+  @@map("products")
+}
+
+model BandCrawledData {
+  id          String          @id @default(cuid())
+  sourceUrl   String          @unique @map("source_url")
+  content     String          @db.Text
+  processed   ProcessedStatus @default(pending)
+  crawledAt   DateTime        @default(now()) @map("crawled_at")
+  processedAt DateTime?       @map("processed_at")
+
+  @@map("band_crawled_data")
+}
+
+model Booking {
+  id                String        @id @default(cuid())
+  userId            String        @map("user_id")
+  productId         String?       @map("product_id")
+  departureDate     DateTime?     @map("departure_date") @db.Date
+  nights            Int?
+  headcount         Int
+  additionalRequest String?       @map("additional_request") @db.Text
+  status            BookingStatus @default(pending)
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("bookings")
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User?         @relation(fields: [userId], references: [id])
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  role      ChatRole
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("chat_messages")
+}
