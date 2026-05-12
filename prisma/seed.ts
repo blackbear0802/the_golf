@@ -1,10 +1,30 @@
-// Phase 1 MVP 시드 데이터 (동남아/일본 시니어 골프 패키지 5개)
+// Phase 1 MVP 시드 데이터 (동남아/일본 시니어 골프 패키지 5개 + 미디어)
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
+
+const UNSPLASH = (id: string) =>
+  `https://images.unsplash.com/${id}?w=1600&auto=format&fit=crop&q=80`;
+
+const SAMPLE_MEDIA = {
+  golf: [
+    UNSPLASH("photo-1535131749006-b7f58c99034b"),
+    UNSPLASH("photo-1587174486073-ae5e5cff23aa"),
+    UNSPLASH("photo-1592919505780-303950717480"),
+  ],
+  accommodation: [
+    UNSPLASH("photo-1566073771259-6a8506099945"),
+    UNSPLASH("photo-1611892440504-42a792e24d32"),
+  ],
+  dining: [
+    UNSPLASH("photo-1414235077428-338989a2e8c0"),
+    UNSPLASH("photo-1517248135467-4c7edcad34c4"),
+  ],
+  youtube: ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+};
 
 const products = [
   {
@@ -64,13 +84,49 @@ const products = [
   },
 ];
 
+function buildMedia(productId: string) {
+  const rows = [
+    ...SAMPLE_MEDIA.golf.map((url, i) => ({
+      productId,
+      type: "golf" as const,
+      url,
+      order: i,
+      caption: `골프장 ${i + 1}`,
+    })),
+    ...SAMPLE_MEDIA.accommodation.map((url, i) => ({
+      productId,
+      type: "accommodation" as const,
+      url,
+      order: i,
+      caption: `숙소 ${i + 1}`,
+    })),
+    ...SAMPLE_MEDIA.dining.map((url, i) => ({
+      productId,
+      type: "dining" as const,
+      url,
+      order: i,
+      caption: `식음료 ${i + 1}`,
+    })),
+    ...SAMPLE_MEDIA.youtube.map((url, i) => ({
+      productId,
+      type: "youtube" as const,
+      url,
+      order: i,
+      caption: "소개 영상",
+    })),
+  ];
+  return rows;
+}
+
 async function main() {
-  console.log("기존 상품 데이터 삭제 중...");
+  console.log("기존 상품·미디어 데이터 삭제 중...");
+  await prisma.productMedia.deleteMany();
   await prisma.product.deleteMany();
 
   console.log(`${products.length}개 상품 시드 시작...`);
   for (const product of products) {
     const created = await prisma.product.create({ data: product });
+    await prisma.productMedia.createMany({ data: buildMedia(created.id) });
     console.log(`  ✓ ${created.destination} — ${created.golfCourse}`);
   }
 

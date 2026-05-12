@@ -28,6 +28,13 @@ enum BookingStatus {
   cancelled
 }
 
+enum MediaType {
+  golf
+  accommodation
+  dining
+  youtube
+}
+
 model User {
   id               String   @id @default(cuid())
   kakaoId          String?  @unique @map("kakao_id")
@@ -62,9 +69,25 @@ model Product {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   bookings Booking[]
+  media    ProductMedia[]
 
   @@index([destination, departureDate, capacity, nights])
   @@map("products")
+}
+
+model ProductMedia {
+  id        String    @id @default(cuid())
+  productId String    @map("product_id")
+  type      MediaType
+  url       String
+  caption   String?
+  order     Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, type, order])
+  @@map("product_media")
 }
 
 model BandCrawledData {
