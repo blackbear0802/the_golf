@@ -34,6 +34,7 @@ model User {
   name             String?
   email            String?  @unique
   phone            String?
+  passwordHash     String?  @map("password_hash")
   signupCompleted  Boolean  @default(false) @map("signup_completed")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
