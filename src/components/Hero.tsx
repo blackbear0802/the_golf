@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const EXAMPLE_QUERIES = [
   "치앙마이 4명 골프 투어",
@@ -10,7 +11,17 @@ const EXAMPLE_QUERIES = [
 ];
 
 export default function Hero() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
+
+  function goSearch(q: string) {
+    const trimmed = q.trim();
+    if (!trimmed) {
+      router.push("/search");
+      return;
+    }
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+  }
 
   return (
     <section className="bg-gradient-to-b from-warm-50 to-background px-5 py-14 md:px-8 md:py-20">
@@ -27,7 +38,7 @@ export default function Hero() {
           className="mt-10"
           onSubmit={(e) => {
             e.preventDefault();
-            // TODO: 채팅 페이지로 이동 (다음 단계에서 구현)
+            goSearch(query);
           }}
         >
           <div className="flex flex-col gap-3 rounded-2xl border-2 border-warm-300 bg-white p-3 shadow-lg md:flex-row md:p-4">
@@ -51,7 +62,8 @@ export default function Hero() {
           {EXAMPLE_QUERIES.map((q) => (
             <button
               key={q}
-              onClick={() => setQuery(q)}
+              type="button"
+              onClick={() => goSearch(q)}
               className="rounded-full border-2 border-warm-200 bg-white px-4 py-2.5 text-base font-medium text-neutral-700 transition-colors hover:border-warm-400 hover:bg-warm-50"
             >
               {q}
