@@ -109,7 +109,15 @@ export default async function MyPage() {
           </section>
 
           <section className="mt-8 rounded-2xl border-2 border-warm-100 bg-white p-6 md:p-8">
-            <h2 className="text-xl md:text-2xl font-black text-neutral-900">회원 정보</h2>
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-xl md:text-2xl font-black text-neutral-900">회원 정보</h2>
+              <Link
+                href="/my/edit"
+                className="text-base font-bold text-warm-600 hover:underline"
+              >
+                수정 →
+              </Link>
+            </div>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
               <InfoCell label="이름" value={user?.name ?? "-"} />
               <InfoCell label="이메일" value={user?.email ?? "-"} />
