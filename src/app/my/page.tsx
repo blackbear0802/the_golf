@@ -34,6 +34,11 @@ function formatDateTime(date: Date) {
   return `${y}.${m}.${d} ${hh}:${mm}`;
 }
 
+function daysUntil(date: Date, from: Date) {
+  const oneDay = 1000 * 60 * 60 * 24;
+  return Math.ceil((date.getTime() - from.getTime()) / oneDay);
+}
+
 export default async function MyPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -52,6 +57,25 @@ export default async function MyPage() {
     }),
   ]);
 
+  const now = new Date();
+  const totalBookings = bookings.length;
+  const confirmedBookings = bookings.filter((b) => b.status === "confirmed").length;
+  const upcomingTour = bookings
+    .filter(
+      (b) =>
+        b.status !== "cancelled" &&
+        b.product &&
+        b.product.departureDate.getTime() > now.getTime()
+    )
+    .sort(
+      (a, b) =>
+        (a.product?.departureDate.getTime() ?? 0) -
+        (b.product?.departureDate.getTime() ?? 0)
+    )[0];
+  const nextTourDays = upcomingTour?.product
+    ? daysUntil(upcomingTour.product.departureDate, now)
+    : null;
+
   return (
     <>
       <Header />
@@ -63,6 +87,26 @@ export default async function MyPage() {
           <p className="mt-2 text-base md:text-lg text-neutral-600">
             예약 내역과 회원 정보를 한눈에 확인하실 수 있어요
           </p>
+
+          <section className="mt-8 grid gap-4 sm:grid-cols-3">
+            <StatCard label="총 예약" value={`${totalBookings}건`} />
+            <StatCard label="확정 예약" value={`${confirmedBookings}건`} accent />
+            <StatCard
+              label="다음 투어"
+              value={
+                nextTourDays === null
+                  ? "예정 없음"
+                  : nextTourDays === 0
+                  ? "오늘 출발"
+                  : `D-${nextTourDays}`
+              }
+              sub={
+                upcomingTour?.product
+                  ? `${upcomingTour.product.destination} · ${formatDate(upcomingTour.product.departureDate)}`
+                  : undefined
+              }
+            />
+          </section>
 
           <section className="mt-8 rounded-2xl border-2 border-warm-100 bg-white p-6 md:p-8">
             <h2 className="text-xl md:text-2xl font-black text-neutral-900">회원 정보</h2>
@@ -165,6 +209,40 @@ export default async function MyPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={[
+        "rounded-2xl border-2 bg-white p-5 md:p-6",
+        accent ? "border-warm-300" : "border-warm-100",
+      ].join(" ")}
+    >
+      <p className="text-sm font-bold text-neutral-500">{label}</p>
+      <p
+        className={[
+          "mt-2 text-3xl md:text-4xl font-black",
+          accent ? "text-warm-600" : "text-neutral-900",
+        ].join(" ")}
+      >
+        {value}
+      </p>
+      {sub && (
+        <p className="mt-2 text-sm text-neutral-600 truncate">{sub}</p>
+      )}
+    </div>
   );
 }
 
