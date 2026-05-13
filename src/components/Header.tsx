@@ -31,7 +31,7 @@ export default function Header() {
                   href="/admin"
                   className="flex h-12 items-center rounded-xl bg-neutral-900 px-4 md:px-5 text-lg font-bold text-white transition-colors hover:bg-neutral-800"
                 >
-                  어드민
+                  관리자페이지
                 </Link>
               )}
               <Link
