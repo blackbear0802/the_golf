@@ -20,10 +20,20 @@ export default async function AdminProductsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl md:text-3xl font-black text-neutral-900">상품 관리</h1>
-      <p className="mt-1 text-base text-neutral-600">
-        등록된 상품 목록 ({products.length}건) — 등록/수정 폼은 곧 추가됩니다
-      </p>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black text-neutral-900">상품 관리</h1>
+          <p className="mt-1 text-base text-neutral-600">
+            등록된 상품 목록 ({products.length}건)
+          </p>
+        </div>
+        <Link
+          href="/admin/products/new"
+          className="flex h-12 items-center rounded-xl bg-warm-500 px-5 text-base font-bold text-white transition-colors hover:bg-warm-600"
+        >
+          + 신규 등록
+        </Link>
+      </div>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
         {products.length === 0 ? (
@@ -42,6 +52,7 @@ export default async function AdminProductsPage() {
                 <th className="px-4 py-3 text-left font-bold">정원</th>
                 <th className="px-4 py-3 text-left font-bold">미디어</th>
                 <th className="px-4 py-3 text-left font-bold">예약</th>
+                <th className="px-4 py-3 text-right font-bold">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -66,6 +77,14 @@ export default async function AdminProductsPage() {
                   <td className="px-4 py-3 text-neutral-700">{p.capacity}명</td>
                   <td className="px-4 py-3 text-neutral-700">{p._count.media}개</td>
                   <td className="px-4 py-3 text-neutral-700">{p._count.bookings}건</td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/admin/products/${p.id}/edit`}
+                      className="inline-flex h-9 items-center rounded-lg border border-warm-300 px-3 text-sm font-bold text-warm-700 transition-colors hover:bg-warm-50"
+                    >
+                      수정
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
