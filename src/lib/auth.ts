@@ -31,18 +31,23 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email ?? "",
           name: user.name ?? "",
+          role: user.role,
         };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.userId = user.id;
+      if (user) {
+        token.userId = user.id;
+        token.role = (user as { role?: "user" | "admin" }).role ?? "user";
+      }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.userId) {
         session.user.id = token.userId as string;
+        session.user.role = (token.role as "user" | "admin") ?? "user";
       }
       return session;
     },
