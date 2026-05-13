@@ -26,6 +26,14 @@ export default function Header() {
               <span className="hidden md:inline text-base text-neutral-700">
                 <span className="font-bold">{session.user?.name ?? "회원"}</span> 님
               </span>
+              {session.user?.role === "admin" && (
+                <Link
+                  href="/admin"
+                  className="flex h-12 items-center rounded-xl bg-neutral-900 px-4 md:px-5 text-lg font-bold text-white transition-colors hover:bg-neutral-800"
+                >
+                  어드민
+                </Link>
+              )}
               <Link
                 href="/my"
                 className="flex h-12 items-center rounded-xl bg-warm-500 px-4 md:px-5 text-lg font-bold text-white transition-colors hover:bg-warm-600"
