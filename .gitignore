@@ -48,3 +48,7 @@ next-env.d.ts
 .env*.local
 
 /src/generated/prisma
+
+# AI 와이어프레임/디자인 참고 자료 (로컬에만 보관)
+/wire_frame
+
