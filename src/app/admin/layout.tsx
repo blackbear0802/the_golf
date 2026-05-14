@@ -31,6 +31,7 @@ export default async function AdminLayout({
           <SideLink href="/admin" label="대시보드" />
           <SideLink href="/admin/bookings" label="예약 관리" />
           <SideLink href="/admin/products" label="상품 관리" />
+          <SideLink href="/admin/settings" label="설정" />
         </nav>
         <div className="hidden md:block px-5 py-5">
           <Link
