@@ -7,7 +7,7 @@
 
 ## 설계 결정 (확정)
 - **대상**: 본인이 가입한 비공개 밴드, 본인이 공동운영자
-- **인증**: 운영자가 `/admin/settings` 페이지에서 NID_AUT/NID_SES 쿠키 수동 입력. AppConfig DB 모델에 저장
+- **인증**: 운영자가 `/admin/settings` 페이지에서 band.us의 Cookie 헤더(전체)를 한 덩어리로 붙여넣음. AppConfig.bandCookies에 raw 문자열 저장. (band.us는 자체 인증을 쓰며 핵심 쿠키 조합이 모호해 전체 보관이 안전 — NID_AUT/NID_SES는 naver.com 도메인 쿠키라 무관)
 - **트리거**: Vercel Cron (1시간 간격, 추후 조정)
 - **파싱**: Claude API (Haiku 4.5 default — 비용 효율)
 - **연락처 치환**: AppConfig에 `operatorName`, `operatorPhone`, `operatorEmail` 보관, 본문에 포함된 원본 연락처를 정규식으로 제거 + 메타 필드에 우리 측 정보로 채움

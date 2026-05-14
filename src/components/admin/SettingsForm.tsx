@@ -9,8 +9,7 @@ export type SettingsInitial = {
   operatorPhone: string;
   operatorEmail: string;
   bandId: string;
-  bandNidAutMasked: string;
-  bandNidSesMasked: string;
+  bandCookiesMasked: string;
   crawlEnabled: boolean;
 };
 
@@ -19,8 +18,7 @@ type FormState = {
   operatorPhone: string;
   operatorEmail: string;
   bandId: string;
-  bandNidAut: string;
-  bandNidSes: string;
+  bandCookies: string;
   crawlEnabled: boolean;
 };
 
@@ -31,8 +29,7 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
     operatorPhone: initial.operatorPhone,
     operatorEmail: initial.operatorEmail,
     bandId: initial.bandId,
-    bandNidAut: "",
-    bandNidSes: "",
+    bandCookies: "",
     crawlEnabled: initial.crawlEnabled,
   });
   const [loading, setLoading] = useState(false);
@@ -65,7 +62,7 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
     }
 
     setSuccess("설정이 저장되었습니다.");
-    setForm((prev) => ({ ...prev, bandNidAut: "", bandNidSes: "" }));
+    setForm((prev) => ({ ...prev, bandCookies: "" }));
     setLoading(false);
     router.refresh();
   }
@@ -114,14 +111,13 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
         title="네이버 밴드 연결"
         description={
           <>
-            band.us 로그인 후 개발자도구 → Application → Cookies → band.us에서{" "}
-            <code className="font-mono">NID_AUT</code>,{" "}
-            <code className="font-mono">NID_SES</code> 값을 복사해 붙여넣으세요. 빈 칸으로
-            저장하면 기존 값을 유지합니다.
+            band.us 로그인 후 개발자도구(F12) → <b>Network</b> 탭 → band.us 요청 클릭 →
+            Request Headers의 <code className="font-mono">Cookie:</code> 한 줄을 통째로
+            복사해 붙여넣으세요. 빈 칸으로 저장하면 기존 값을 유지합니다.
           </>
         }
       >
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="space-y-5">
           <Field label="밴드 ID" htmlFor="bandId">
             <input
               id="bandId"
@@ -129,35 +125,27 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
               value={form.bandId}
               onChange={(e) => update("bandId", e.target.value)}
               placeholder="86xxxxx"
-              className={inputClass}
+              className={`${inputClass} md:max-w-xs`}
             />
           </Field>
           <Field
-            label={`NID_AUT ${initial.bandNidAutMasked ? `(현재: ${initial.bandNidAutMasked})` : "(미등록)"}`}
-            htmlFor="bandNidAut"
+            label={`Cookie 헤더 ${
+              initial.bandCookiesMasked ? `(현재: ${initial.bandCookiesMasked})` : "(미등록)"
+            }`}
+            htmlFor="bandCookies"
           >
-            <input
-              id="bandNidAut"
-              type="password"
+            <textarea
+              id="bandCookies"
+              rows={4}
               autoComplete="off"
-              value={form.bandNidAut}
-              onChange={(e) => update("bandNidAut", e.target.value)}
-              placeholder={initial.bandNidAutMasked ? "변경 시에만 입력" : "쿠키 값 붙여넣기"}
-              className={inputClass}
-            />
-          </Field>
-          <Field
-            label={`NID_SES ${initial.bandNidSesMasked ? `(현재: ${initial.bandNidSesMasked})` : "(미등록)"}`}
-            htmlFor="bandNidSes"
-          >
-            <input
-              id="bandNidSes"
-              type="password"
-              autoComplete="off"
-              value={form.bandNidSes}
-              onChange={(e) => update("bandNidSes", e.target.value)}
-              placeholder={initial.bandNidSesMasked ? "변경 시에만 입력" : "쿠키 값 붙여넣기"}
-              className={inputClass}
+              value={form.bandCookies}
+              onChange={(e) => update("bandCookies", e.target.value)}
+              placeholder={
+                initial.bandCookiesMasked
+                  ? "변경 시에만 새 Cookie 헤더 붙여넣기"
+                  : "ai=...; as=...; band_session=...; rt=...; secretKey=...; SESSION=..."
+              }
+              className={`${inputClass} h-auto font-mono text-sm`}
             />
           </Field>
         </div>

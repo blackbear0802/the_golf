@@ -13,6 +13,9 @@
 ### 왜 쿠키 자동 갱신을 안 하나
 네이버는 자동화 로그인을 ML로 감지·차단함. Playwright + 본인 ID/PW를 서버에 두고 자동 로그인 시도하면 계정 잠김 위험이 있음. 운영자가 1~2주에 한 번 쿠키 갱신하는 부담이 더 안전한 트레이드오프.
 
+### 왜 NID_AUT/NID_SES 가 아니라 Cookie 헤더 통째로인가
+처음에 NID_AUT/NID_SES로 안내했지만 그건 naver.com 도메인 쿠키임. band.us는 별도 인증 시스템(ai/as/band_session/BBC/di/JSESSIONID/rt/secretKey/SESSION 등)을 쓰고, 어떤 조합이 필수인지 외부에 명확하지 않음. 그래서 운영자가 Network 탭의 Cookie 헤더를 통째로 복사해 AppConfig.bandCookies에 raw 문자열로 저장. band-client.ts는 이 값을 그대로 fetch의 Cookie 헤더에 실어 보냄.
+
 ### 왜 이미지를 Blob에 안 옮기나 (1단계)
 URL 그대로가 인프라 0, 비용 0. 네이버 CDN이 외부 핫링크를 막을 가능성은 있지만 일반 게시글 이미지는 Origin 체크 안 함 (확인 필요). `lib/media-storage.ts` 추상화를 두는 이유는 막혔을 때 호출부 손대지 않고 구현만 갈아끼우기 위함.
 

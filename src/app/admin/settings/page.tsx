@@ -5,7 +5,7 @@ import SettingsForm from "@/components/admin/SettingsForm";
 function mask(value: string | null): string {
   if (!value) return "";
   if (value.length <= 8) return "••••";
-  return `${value.slice(0, 4)}••••${value.slice(-4)}`;
+  return `${value.slice(0, 4)}••••${value.slice(-4)} (${value.length}자)`;
 }
 
 function formatDateTime(iso: string | null): string | null {
@@ -25,8 +25,7 @@ export default async function AdminSettingsPage() {
     APP_CONFIG_KEYS.operatorPhone,
     APP_CONFIG_KEYS.operatorEmail,
     APP_CONFIG_KEYS.bandId,
-    APP_CONFIG_KEYS.bandNidAut,
-    APP_CONFIG_KEYS.bandNidSes,
+    APP_CONFIG_KEYS.bandCookies,
     APP_CONFIG_KEYS.crawlEnabled,
     APP_CONFIG_KEYS.cookieExpiredAt,
     APP_CONFIG_KEYS.lastCrawlAt,
@@ -60,18 +59,12 @@ export default async function AdminSettingsPage() {
           tone={lastCrawlAt ? (lastSuccess ? "ok" : "warn") : "muted"}
         />
         <StatusCard
-          label="네이버 쿠키"
+          label="밴드 쿠키"
           value={
-            cookieExpired
-              ? "만료됨"
-              : cfg.bandNidAut && cfg.bandNidSes
-              ? "등록됨"
-              : "미등록"
+            cookieExpired ? "만료됨" : cfg.bandCookies ? "등록됨" : "미등록"
           }
-          sub={cookieExpired ? "쿠키를 다시 등록해주세요" : undefined}
-          tone={
-            cookieExpired ? "warn" : cfg.bandNidAut && cfg.bandNidSes ? "ok" : "muted"
-          }
+          sub={cookieExpired ? "Cookie 헤더를 다시 등록해주세요" : undefined}
+          tone={cookieExpired ? "warn" : cfg.bandCookies ? "ok" : "muted"}
         />
         <StatusCard
           label="자동 크롤링"
@@ -87,8 +80,7 @@ export default async function AdminSettingsPage() {
             operatorPhone: cfg.operatorPhone ?? "",
             operatorEmail: cfg.operatorEmail ?? "",
             bandId: cfg.bandId ?? "",
-            bandNidAutMasked: mask(cfg.bandNidAut),
-            bandNidSesMasked: mask(cfg.bandNidSes),
+            bandCookiesMasked: mask(cfg.bandCookies),
             crawlEnabled: cfg.crawlEnabled === "true",
           }}
         />

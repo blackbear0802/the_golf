@@ -6,7 +6,7 @@
 - [ ] Anthropic Claude API 키 발급 및 충전
 - [ ] `.env` 와 Vercel 환경변수에 `ANTHROPIC_API_KEY` 추가
 - [ ] Vercel 환경변수에 `CRON_SECRET` 추가 (랜덤 32바이트)
-- [ ] 운영자가 본인 NID_AUT/NID_SES 쿠키 추출 방법 숙지
+- [ ] band.us 로그인 → F12 Network 탭에서 Cookie 헤더 통째 복사하는 방법 숙지
 
 ## Phase 1 — 인프라/모델
 - [ ] Prisma: `AppConfig` 모델 (key String @id, value String, updatedAt)

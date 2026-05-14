@@ -10,8 +10,7 @@ type SettingsPayload = {
   operatorPhone?: string;
   operatorEmail?: string;
   bandId?: string;
-  bandNidAut?: string;
-  bandNidSes?: string;
+  bandCookies?: string;
   crawlEnabled?: boolean;
 };
 
@@ -51,21 +50,15 @@ export async function PATCH(req: Request) {
     updates[APP_CONFIG_KEYS.bandId] = v;
   }
 
-  // 쿠키는 입력값이 있을 때만 갱신 (빈 문자열은 기존 유지)
-  if (typeof body.bandNidAut === "string" && body.bandNidAut.trim()) {
-    updates[APP_CONFIG_KEYS.bandNidAut] = body.bandNidAut.trim();
-  }
-  if (typeof body.bandNidSes === "string" && body.bandNidSes.trim()) {
-    updates[APP_CONFIG_KEYS.bandNidSes] = body.bandNidSes.trim();
+  // 쿠키 헤더는 입력값이 있을 때만 갱신 (빈 문자열은 기존 유지)
+  if (typeof body.bandCookies === "string" && body.bandCookies.trim()) {
+    updates[APP_CONFIG_KEYS.bandCookies] = body.bandCookies.trim();
+    // 새 쿠키 입력 시 만료 플래그 해제
+    updates[APP_CONFIG_KEYS.cookieExpiredAt] = "";
   }
 
   if (typeof body.crawlEnabled === "boolean") {
     updates[APP_CONFIG_KEYS.crawlEnabled] = body.crawlEnabled ? "true" : "false";
-  }
-
-  // 쿠키가 갱신되면 만료 플래그 해제
-  if (updates[APP_CONFIG_KEYS.bandNidAut] || updates[APP_CONFIG_KEYS.bandNidSes]) {
-    updates[APP_CONFIG_KEYS.cookieExpiredAt] = "";
   }
 
   await setConfigMany(updates);
