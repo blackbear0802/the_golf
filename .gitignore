@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -51,4 +52,9 @@ next-env.d.ts
 
 # AI 와이어프레임/디자인 참고 자료 (로컬에만 보관)
 /wire_frame
+
+# 평문 시크릿 (Anthropic 키 등 절대 커밋 금지)
+*_key.txt
+*_secret.txt
+claude_api_key.txt
 
