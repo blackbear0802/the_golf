@@ -89,8 +89,13 @@ export default function ProductForm(props: Props) {
       return;
     }
 
+    const next =
+      props.mode === "create"
+        ? `/admin/products/${((await res.json()) as { id: string }).id}/edit`
+        : "/admin/products";
+
     startTransition(() => {
-      router.push("/admin/products");
+      router.push(next);
       router.refresh();
     });
   }
