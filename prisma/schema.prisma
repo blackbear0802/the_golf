@@ -71,6 +71,8 @@ model Product {
   deadline      DateTime? @db.Date
   sourceUrl     String?  @map("source_url")
   rawText       String?  @map("raw_text") @db.Text
+  autoImported  Boolean  @default(false) @map("auto_imported")
+  bandPostId    String?  @unique @map("band_post_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -79,6 +81,14 @@ model Product {
 
   @@index([destination, departureDate, capacity, nights])
   @@map("products")
+}
+
+model AppConfig {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_config")
 }
 
 model ProductMedia {
