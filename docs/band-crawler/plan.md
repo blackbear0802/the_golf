@@ -10,7 +10,7 @@
 - **인증**: 운영자가 `/admin/settings` 페이지에서 band.us의 Cookie 헤더(전체)를 한 덩어리로 붙여넣음. AppConfig.bandCookies에 raw 문자열 저장. (band.us는 자체 인증을 쓰며 핵심 쿠키 조합이 모호해 전체 보관이 안전 — NID_AUT/NID_SES는 naver.com 도메인 쿠키라 무관)
 - **트리거**: Vercel Cron (1시간 간격, 추후 조정)
 - **파싱**: Claude API (Haiku 4.5 default — 비용 효율)
-- **연락처 치환**: AppConfig에 `operatorName`, `operatorPhone`, `operatorEmail` 보관, 본문에 포함된 원본 연락처를 정규식으로 제거 + 메타 필드에 우리 측 정보로 채움
+- **연락처 치환**: AppConfig에 담당자 2명 분의 (`operator1Name/Phone/Email`, `operator2Name/Phone/Email`) 보관. 본문에 포함된 원본 연락처를 정규식으로 제거하고 두 담당자 정보를 모두 노출 (예: "담당: 홍길동 010-..., 김철수 010-...")
 - **미디어**: 1단계 URL 그대로 ProductMedia.url 저장. `lib/media-storage.ts` 추상화 계층을 둬서 2단계에서 Vercel Blob 이관 시 호출부 변경 없게
 - **운영 흐름**: 자동 등록 → 어드민 상품 목록에서 `auto_imported=true` 뱃지로 식별 → 검수/수정/삭제
 

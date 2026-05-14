@@ -2,9 +2,12 @@
 import { prisma } from "@/lib/db";
 
 export const APP_CONFIG_KEYS = {
-  operatorName: "operatorName",
-  operatorPhone: "operatorPhone",
-  operatorEmail: "operatorEmail",
+  operator1Name: "operator1Name",
+  operator1Phone: "operator1Phone",
+  operator1Email: "operator1Email",
+  operator2Name: "operator2Name",
+  operator2Phone: "operator2Phone",
+  operator2Email: "operator2Email",
   bandId: "bandId",
   bandCookies: "bandCookies",
   crawlEnabled: "crawlEnabled",

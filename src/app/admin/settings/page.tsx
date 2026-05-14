@@ -21,9 +21,12 @@ function formatDateTime(iso: string | null): string | null {
 
 export default async function AdminSettingsPage() {
   const cfg = await getConfigMany([
-    APP_CONFIG_KEYS.operatorName,
-    APP_CONFIG_KEYS.operatorPhone,
-    APP_CONFIG_KEYS.operatorEmail,
+    APP_CONFIG_KEYS.operator1Name,
+    APP_CONFIG_KEYS.operator1Phone,
+    APP_CONFIG_KEYS.operator1Email,
+    APP_CONFIG_KEYS.operator2Name,
+    APP_CONFIG_KEYS.operator2Phone,
+    APP_CONFIG_KEYS.operator2Email,
     APP_CONFIG_KEYS.bandId,
     APP_CONFIG_KEYS.bandCookies,
     APP_CONFIG_KEYS.crawlEnabled,
@@ -76,9 +79,16 @@ export default async function AdminSettingsPage() {
       <div className="mt-8">
         <SettingsForm
           initial={{
-            operatorName: cfg.operatorName ?? "",
-            operatorPhone: cfg.operatorPhone ?? "",
-            operatorEmail: cfg.operatorEmail ?? "",
+            operator1: {
+              name: cfg.operator1Name ?? "",
+              phone: cfg.operator1Phone ?? "",
+              email: cfg.operator1Email ?? "",
+            },
+            operator2: {
+              name: cfg.operator2Name ?? "",
+              phone: cfg.operator2Phone ?? "",
+              email: cfg.operator2Email ?? "",
+            },
             bandId: cfg.bandId ?? "",
             bandCookiesMasked: mask(cfg.bandCookies),
             crawlEnabled: cfg.crawlEnabled === "true",

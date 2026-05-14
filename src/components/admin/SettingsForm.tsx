@@ -4,19 +4,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+export type OperatorInitial = {
+  name: string;
+  phone: string;
+  email: string;
+};
+
 export type SettingsInitial = {
-  operatorName: string;
-  operatorPhone: string;
-  operatorEmail: string;
+  operator1: OperatorInitial;
+  operator2: OperatorInitial;
   bandId: string;
   bandCookiesMasked: string;
   crawlEnabled: boolean;
 };
 
 type FormState = {
-  operatorName: string;
-  operatorPhone: string;
-  operatorEmail: string;
+  operator1: OperatorInitial;
+  operator2: OperatorInitial;
   bandId: string;
   bandCookies: string;
   crawlEnabled: boolean;
@@ -25,9 +29,8 @@ type FormState = {
 export default function SettingsForm({ initial }: { initial: SettingsInitial }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({
-    operatorName: initial.operatorName,
-    operatorPhone: initial.operatorPhone,
-    operatorEmail: initial.operatorEmail,
+    operator1: { ...initial.operator1 },
+    operator2: { ...initial.operator2 },
     bandId: initial.bandId,
     bandCookies: "",
     crawlEnabled: initial.crawlEnabled,
@@ -42,6 +45,16 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
     if (success) setSuccess("");
   }
 
+  function updateOperator(
+    slot: "operator1" | "operator2",
+    field: keyof OperatorInitial,
+    value: string
+  ) {
+    setForm((prev) => ({ ...prev, [slot]: { ...prev[slot], [field]: value } }));
+    if (error) setError("");
+    if (success) setSuccess("");
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -51,7 +64,13 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        operator1: form.operator1,
+        operator2: form.operator2,
+        bandId: form.bandId,
+        bandCookies: form.bandCookies,
+        crawlEnabled: form.crawlEnabled,
+      }),
     });
 
     if (!res.ok) {
@@ -70,40 +89,23 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       <Section
-        title="담당자 정보"
-        description="자동 등록된 상품에서 공급자 연락처를 이 정보로 치환합니다."
+        title="담당자 정보 (2명)"
+        description="자동 등록된 상품에서 공급자 연락처를 두 담당자 정보로 치환합니다."
       >
-        <div className="grid gap-5 md:grid-cols-3">
-          <Field label="이름" htmlFor="operatorName">
-            <input
-              id="operatorName"
-              type="text"
-              value={form.operatorName}
-              onChange={(e) => update("operatorName", e.target.value)}
-              placeholder="홍길동"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="연락처" htmlFor="operatorPhone">
-            <input
-              id="operatorPhone"
-              type="tel"
-              value={form.operatorPhone}
-              onChange={(e) => update("operatorPhone", e.target.value)}
-              placeholder="010-1234-5678"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="이메일" htmlFor="operatorEmail">
-            <input
-              id="operatorEmail"
-              type="email"
-              value={form.operatorEmail}
-              onChange={(e) => update("operatorEmail", e.target.value)}
-              placeholder="contact@thegolf.com"
-              className={inputClass}
-            />
-          </Field>
+        <div className="space-y-6">
+          <OperatorRow
+            label="담당자 1"
+            slot="operator1"
+            value={form.operator1}
+            onChange={(field, v) => updateOperator("operator1", field, v)}
+          />
+          <div className="border-t border-neutral-200" />
+          <OperatorRow
+            label="담당자 2"
+            slot="operator2"
+            value={form.operator2}
+            onChange={(field, v) => updateOperator("operator2", field, v)}
+          />
         </div>
       </Section>
 
@@ -189,6 +191,56 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
         </button>
       </div>
     </form>
+  );
+}
+
+function OperatorRow({
+  label,
+  slot,
+  value,
+  onChange,
+}: {
+  label: string;
+  slot: "operator1" | "operator2";
+  value: OperatorInitial;
+  onChange: (field: keyof OperatorInitial, value: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-base font-bold text-neutral-700">{label}</p>
+      <div className="mt-3 grid gap-4 md:grid-cols-3">
+        <Field label="이름" htmlFor={`${slot}-name`}>
+          <input
+            id={`${slot}-name`}
+            type="text"
+            value={value.name}
+            onChange={(e) => onChange("name", e.target.value)}
+            placeholder="홍길동"
+            className={inputClass}
+          />
+        </Field>
+        <Field label="연락처" htmlFor={`${slot}-phone`}>
+          <input
+            id={`${slot}-phone`}
+            type="tel"
+            value={value.phone}
+            onChange={(e) => onChange("phone", e.target.value)}
+            placeholder="010-1234-5678"
+            className={inputClass}
+          />
+        </Field>
+        <Field label="이메일" htmlFor={`${slot}-email`}>
+          <input
+            id={`${slot}-email`}
+            type="email"
+            value={value.email}
+            onChange={(e) => onChange("email", e.target.value)}
+            placeholder="contact@thegolf.com"
+            className={inputClass}
+          />
+        </Field>
+      </div>
+    </div>
   );
 }
 
