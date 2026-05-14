@@ -1,6 +1,7 @@
-// 어드민 상품 관리 (목록 - 등록/수정 폼은 다음 단계)
+// 어드민 상품 관리 (목록 + 자동/수동 필터 + 자동등록 뱃지)
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("ko-KR").format(price);
@@ -12,11 +13,38 @@ function formatDate(date: Date) {
   return `${date.getFullYear()}.${m}.${d}`;
 }
 
-export default async function AdminProductsPage() {
-  const products = await prisma.product.findMany({
-    orderBy: { departureDate: "asc" },
-    include: { _count: { select: { media: true, bookings: true } } },
-  });
+type Filter = "all" | "auto" | "manual";
+
+function parseFilter(value: string | string[] | undefined): Filter {
+  const v = Array.isArray(value) ? value[0] : value;
+  return v === "auto" || v === "manual" ? v : "all";
+}
+
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ source?: string }>;
+}) {
+  const sp = await searchParams;
+  const filter = parseFilter(sp.source);
+
+  const where: Prisma.ProductWhereInput =
+    filter === "auto"
+      ? { autoImported: true }
+      : filter === "manual"
+        ? { autoImported: false }
+        : {};
+
+  const [products, autoCount, manualCount, totalCount] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      orderBy: { departureDate: "asc" },
+      include: { _count: { select: { media: true, bookings: true } } },
+    }),
+    prisma.product.count({ where: { autoImported: true } }),
+    prisma.product.count({ where: { autoImported: false } }),
+    prisma.product.count(),
+  ]);
 
   return (
     <div>
@@ -24,7 +52,7 @@ export default async function AdminProductsPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-neutral-900">상품 관리</h1>
           <p className="mt-1 text-base text-neutral-600">
-            등록된 상품 목록 ({products.length}건)
+            등록된 상품 목록 ({products.length}건 / 전체 {totalCount}건)
           </p>
         </div>
         <Link
@@ -35,10 +63,16 @@ export default async function AdminProductsPage() {
         </Link>
       </div>
 
+      <div className="mt-5 flex flex-wrap gap-2">
+        <FilterChip current={filter} value="all" label={`전체 ${totalCount}`} />
+        <FilterChip current={filter} value="auto" label={`자동등록 ${autoCount}`} />
+        <FilterChip current={filter} value="manual" label={`수동등록 ${manualCount}`} />
+      </div>
+
       <div className="mt-6 overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
         {products.length === 0 ? (
           <p className="p-10 text-center text-base text-neutral-500">
-            등록된 상품이 없습니다.
+            조건에 맞는 상품이 없습니다.
           </p>
         ) : (
           <table className="w-full text-sm md:text-base">
@@ -50,6 +84,7 @@ export default async function AdminProductsPage() {
                 <th className="px-4 py-3 text-left font-bold">박수</th>
                 <th className="px-4 py-3 text-left font-bold">가격</th>
                 <th className="px-4 py-3 text-left font-bold">정원</th>
+                <th className="px-4 py-3 text-left font-bold">출처</th>
                 <th className="px-4 py-3 text-left font-bold">미디어</th>
                 <th className="px-4 py-3 text-left font-bold">예약</th>
                 <th className="px-4 py-3 text-right font-bold">관리</th>
@@ -75,6 +110,17 @@ export default async function AdminProductsPage() {
                     {formatPrice(p.price)}원
                   </td>
                   <td className="px-4 py-3 text-neutral-700">{p.capacity}명</td>
+                  <td className="px-4 py-3">
+                    {p.autoImported ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
+                        자동등록
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-600 ring-1 ring-neutral-200">
+                        수동
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-neutral-700">{p._count.media}개</td>
                   <td className="px-4 py-3 text-neutral-700">{p._count.bookings}건</td>
                   <td className="px-4 py-3 text-right">
@@ -92,5 +138,31 @@ export default async function AdminProductsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function FilterChip({
+  current,
+  value,
+  label,
+}: {
+  current: Filter;
+  value: Filter;
+  label: string;
+}) {
+  const isActive = current === value;
+  const href = value === "all" ? "/admin/products" : `/admin/products?source=${value}`;
+  return (
+    <Link
+      href={href}
+      className={[
+        "inline-flex h-9 items-center rounded-full px-4 text-sm font-bold transition-colors",
+        isActive
+          ? "bg-neutral-900 text-white"
+          : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50",
+      ].join(" ")}
+    >
+      {label}
+    </Link>
   );
 }

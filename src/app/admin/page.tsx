@@ -1,6 +1,7 @@
-// 어드민 대시보드 (예약/사용자/상품 통계 카드 + 최근 예약 5건)
+// 어드민 대시보드 (예약/사용자/상품 통계 카드 + 크롤링 상태 + 최근 예약 5건)
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { APP_CONFIG_KEYS, getConfigMany } from "@/lib/app-config";
 
 const STATUS_LABEL = {
   pending: "접수 대기",
@@ -17,6 +18,13 @@ function formatDateTime(date: Date) {
   return `${date.getFullYear()}.${m}.${d} ${hh}:${mm}`;
 }
 
+function formatDateTime0(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return formatDateTime(d);
+}
+
 export default async function AdminDashboard() {
   const [
     totalBookings,
@@ -24,13 +32,16 @@ export default async function AdminDashboard() {
     confirmedBookings,
     totalUsers,
     totalProducts,
+    autoImportedCount,
     recentBookings,
+    crawlCfg,
   ] = await Promise.all([
     prisma.booking.count(),
     prisma.booking.count({ where: { status: "pending" } }),
     prisma.booking.count({ where: { status: "confirmed" } }),
     prisma.user.count(),
     prisma.product.count(),
+    prisma.product.count({ where: { autoImported: true } }),
     prisma.booking.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -39,7 +50,20 @@ export default async function AdminDashboard() {
         user: { select: { name: true, phone: true } },
       },
     }),
+    getConfigMany([
+      APP_CONFIG_KEYS.crawlEnabled,
+      APP_CONFIG_KEYS.cookieExpiredAt,
+      APP_CONFIG_KEYS.lastCrawlAt,
+      APP_CONFIG_KEYS.lastCrawlSuccess,
+      APP_CONFIG_KEYS.lastCrawlNew,
+      APP_CONFIG_KEYS.lastCrawlError,
+    ]),
   ]);
+
+  const cookieExpired = !!crawlCfg.cookieExpiredAt;
+  const lastCrawlAt = formatDateTime0(crawlCfg.lastCrawlAt);
+  const lastSuccess = crawlCfg.lastCrawlSuccess === "true";
+  const crawlEnabled = crawlCfg.crawlEnabled === "true";
 
   return (
     <div>
@@ -48,12 +72,58 @@ export default async function AdminDashboard() {
         예약·사용자·상품 현황을 한눈에 확인하세요
       </p>
 
+      {cookieExpired && (
+        <Link
+          href="/admin/settings"
+          className="mt-5 flex items-start gap-3 rounded-2xl border-2 border-brand-500 bg-brand-50 p-4 transition-opacity hover:opacity-90"
+        >
+          <span className="mt-0.5 text-xl">⚠️</span>
+          <div>
+            <p className="text-base font-black text-brand-700">밴드 쿠키가 만료되었습니다</p>
+            <p className="mt-1 text-sm text-brand-700/80">
+              자동 크롤링이 중단된 상태입니다. 설정 페이지에서 Cookie 헤더를 다시 등록해주세요.
+            </p>
+          </div>
+        </Link>
+      )}
+
       <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="총 예약" value={totalBookings} />
         <StatCard label="대기 중" value={pendingBookings} accent />
         <StatCard label="확정" value={confirmedBookings} />
         <StatCard label="회원 수" value={totalUsers} />
         <StatCard label="상품 수" value={totalProducts} />
+      </section>
+
+      <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <CrawlCard
+          label="자동 크롤링"
+          value={crawlEnabled ? "활성" : "비활성"}
+          tone={crawlEnabled ? "ok" : "muted"}
+          href="/admin/settings"
+        />
+        <CrawlCard
+          label="마지막 실행"
+          value={lastCrawlAt ?? "아직 없음"}
+          sub={
+            lastCrawlAt
+              ? lastSuccess
+                ? `성공 · 새 글 ${crawlCfg.lastCrawlNew ?? 0}건`
+                : `실패 · ${crawlCfg.lastCrawlError ?? "원인 미상"}`
+              : undefined
+          }
+          tone={lastCrawlAt ? (lastSuccess ? "ok" : "warn") : "muted"}
+          href="/admin/settings"
+        />
+        <CrawlCard
+          label="자동 등록 상품"
+          value={`${autoImportedCount}건`}
+          sub={
+            autoImportedCount > 0 ? "최근 등록 상품 보기 →" : "아직 자동 등록된 상품이 없습니다"
+          }
+          tone={autoImportedCount > 0 ? "ok" : "muted"}
+          href="/admin/products?source=auto"
+        />
       </section>
 
       <section className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5 md:p-6">
@@ -110,6 +180,44 @@ export default async function AdminDashboard() {
         )}
       </section>
     </div>
+  );
+}
+
+function CrawlCard({
+  label,
+  value,
+  sub,
+  tone,
+  href,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone: "ok" | "warn" | "muted";
+  href: string;
+}) {
+  const toneClass =
+    tone === "ok"
+      ? "border-warm-300 bg-white"
+      : tone === "warn"
+        ? "border-brand-500 bg-brand-50"
+        : "border-neutral-200 bg-white";
+  const valueColor =
+    tone === "ok"
+      ? "text-warm-600"
+      : tone === "warn"
+        ? "text-brand-600"
+        : "text-neutral-900";
+
+  return (
+    <Link
+      href={href}
+      className={`block rounded-2xl border-2 p-5 transition-colors hover:bg-neutral-50 ${toneClass}`}
+    >
+      <p className="text-sm font-bold text-neutral-500">{label}</p>
+      <p className={`mt-2 text-xl md:text-2xl font-black ${valueColor}`}>{value}</p>
+      {sub && <p className="mt-2 text-sm text-neutral-600">{sub}</p>}
+    </Link>
   );
 }
 
