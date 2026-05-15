@@ -3,13 +3,21 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   validateEmail,
   validatePhone,
   validatePassword,
 } from "@/lib/validators";
+
+// open redirect 방지: 상대 경로(/ 시작 + // 시작 아님)만 허용
+function sanitizeCallback(raw: string | null): string {
+  if (!raw) return "/";
+  if (!raw.startsWith("/")) return "/";
+  if (raw.startsWith("//")) return "/";
+  return raw;
+}
 
 type FieldErrors = {
   name?: string;
@@ -21,6 +29,8 @@ type FieldErrors = {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = sanitizeCallback(searchParams.get("callbackUrl"));
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -88,9 +98,13 @@ export default function RegisterPage() {
     });
 
     setLoading(false);
-    router.push("/");
+    router.push(callbackUrl);
     router.refresh();
   }
+
+  const loginHref = callbackUrl === "/"
+    ? "/login"
+    : `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
 
   function fieldClass(hasError: boolean) {
     return [
@@ -232,7 +246,7 @@ export default function RegisterPage() {
 
         <p className="mt-7 text-center text-base text-neutral-600">
           이미 회원이신가요?{" "}
-          <Link href="/login" className="font-bold text-warm-600 underline">
+          <Link href={loginHref} className="font-bold text-warm-600 underline">
             로그인
           </Link>
         </p>

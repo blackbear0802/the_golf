@@ -14,13 +14,13 @@ export default function Hero() {
   const router = useRouter();
   const [query, setQuery] = useState("");
 
-  function goSearch(q: string) {
+  function goChat(q: string) {
     const trimmed = q.trim();
     if (!trimmed) {
-      router.push("/search");
+      router.push("/chat");
       return;
     }
-    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+    router.push(`/chat?initial=${encodeURIComponent(trimmed)}`);
   }
 
   return (
@@ -38,7 +38,7 @@ export default function Hero() {
           className="mt-10"
           onSubmit={(e) => {
             e.preventDefault();
-            goSearch(query);
+            goChat(query);
           }}
         >
           <div className="flex flex-col gap-3 rounded-2xl border-2 border-warm-300 bg-white p-3 shadow-lg md:flex-row md:p-4">
@@ -63,7 +63,7 @@ export default function Hero() {
             <button
               key={q}
               type="button"
-              onClick={() => goSearch(q)}
+              onClick={() => goChat(q)}
               className="rounded-full border-2 border-warm-200 bg-white px-4 py-2.5 text-base font-medium text-neutral-700 transition-colors hover:border-warm-400 hover:bg-warm-50"
             >
               {q}

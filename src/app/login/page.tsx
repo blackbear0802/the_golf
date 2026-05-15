@@ -3,11 +3,13 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = sanitizeCallback(searchParams.get("callbackUrl"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,9 +33,13 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
+    router.push(callbackUrl);
     router.refresh();
   }
+
+  const registerHref = callbackUrl === "/"
+    ? "/register"
+    : `/register?callbackUrl=${encodeURIComponent(callbackUrl)}`;
 
   return (
     <main className="flex flex-1 items-center justify-center bg-warm-50 px-5 py-12">
@@ -97,11 +103,19 @@ export default function LoginPage() {
 
         <p className="mt-7 text-center text-base text-neutral-600">
           아직 회원이 아니신가요?{" "}
-          <Link href="/register" className="font-bold text-warm-600 underline">
+          <Link href={registerHref} className="font-bold text-warm-600 underline">
             회원가입
           </Link>
         </p>
       </div>
     </main>
   );
+}
+
+// open redirect 방지: 상대 경로(/ 시작 + // 시작 아님)만 허용
+function sanitizeCallback(raw: string | null): string {
+  if (!raw) return "/";
+  if (!raw.startsWith("/")) return "/";
+  if (raw.startsWith("//")) return "/";
+  return raw;
 }
