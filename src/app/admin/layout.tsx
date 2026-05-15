@@ -1,9 +1,11 @@
 // 어드민 영역 레이아웃 (다크 사이드바 + 권한 체크)
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-guard";
 
-export const metadata = {
-  title: "어드민 — The Golf",
+export const metadata: Metadata = {
+  title: "어드민",
+  robots: { index: false, follow: false },
 };
 
 export default async function AdminLayout({

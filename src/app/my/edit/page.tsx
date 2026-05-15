@@ -1,5 +1,12 @@
 // 회원 정보 수정 페이지 (프로필 + 비밀번호 변경 두 섹션)
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "회원정보 수정",
+  robots: { index: false, follow: false },
+};
+
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";

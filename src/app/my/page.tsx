@@ -1,5 +1,12 @@
 // 마이페이지 (회원 정보 + 내 예약 내역)
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "마이페이지",
+  robots: { index: false, follow: false },
+};
+
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";

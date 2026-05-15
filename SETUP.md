@@ -23,7 +23,7 @@ npm install
 |------|------------|------|
 | `DATABASE_URL` | Neon 대시보드 → Connection Details (pooler) | 모든 머신에서 동일 |
 | `NEXTAUTH_SECRET` | Vercel → Settings → Environment Variables | 모든 머신에서 동일해야 세션 유지됨 |
-| `NEXTAUTH_URL` | 로컬은 `http://localhost:3005`, 배포는 `https://the-golf-v2.vercel.app` | 머신별로 다를 수 있음 |
+| `NEXTAUTH_URL` | 로컬은 `http://localhost:3005`, 배포는 `https://thegolfer.co.kr` | 머신별로 다를 수 있음 |
 | `ANTHROPIC_API_KEY` | Anthropic 콘솔 | 밴드 크롤러 로컬 테스트할 때만 필요 |
 | `CRON_SECRET` | Vercel 환경변수 | 로컬 크론 호출 테스트할 때만 필요 |
 

@@ -1,9 +1,52 @@
 // 상품 상세 페이지 (DB Product 단건 조회 + 미디어 갤러리 + 유튜브 영상)
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const product = await prisma.product.findUnique({
+    where: { id },
+    select: {
+      destination: true,
+      golfCourse: true,
+      nights: true,
+      price: true,
+      departureDate: true,
+    },
+  });
+  if (!product) {
+    return { title: "상품을 찾을 수 없습니다", robots: { index: false } };
+  }
+
+  const priceText = new Intl.NumberFormat("ko-KR").format(product.price);
+  const dep = product.departureDate;
+  const dateText = `${dep.getFullYear()}.${String(dep.getMonth() + 1).padStart(2, "0")}.${String(
+    dep.getDate()
+  ).padStart(2, "0")} 출발`;
+  const title = `${product.destination} ${product.nights}박 ${product.golfCourse}`;
+  const description = `${dateText} · 1인 ${priceText}원. ${product.destination} 골프 투어 — 항공·숙박·라운딩 포함. 더 골프에서 안전하게 예약하세요.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/products/${id}` },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: `/products/${id}`,
+    },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("ko-KR").format(price);

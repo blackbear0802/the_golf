@@ -1,9 +1,21 @@
 // 상품 검색/목록 페이지 (Prisma 조건 조회, 필터 + 카드 그리드)
+import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SearchFilters from "@/components/SearchFilters";
 import ProductCard from "@/components/ProductCard";
+
+export const metadata: Metadata = {
+  title: "골프 투어 상품 검색",
+  description: "목적지·일정·예산별 골프 투어 패키지를 검색하세요. 시니어 맞춤 항공·숙박·라운딩이 모두 포함된 가격으로 비교 가능합니다.",
+  alternates: { canonical: "/search" },
+  openGraph: {
+    title: "골프 투어 상품 검색",
+    description: "목적지·일정·예산별 골프 투어 패키지를 검색하세요.",
+    url: "/search",
+  },
+};
 
 const PRICE_BUCKETS: Record<string, { gte?: number; lt?: number }> = {
   under150: { lt: 1_500_000 },

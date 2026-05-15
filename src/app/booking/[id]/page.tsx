@@ -1,6 +1,13 @@
 // 예약 홀딩 폼 페이지 (로그인 필수, 자동 채움 + 직접 입력)
+import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "예약 문의",
+  robots: { index: false, follow: false },
+};
+
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";

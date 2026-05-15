@@ -1,5 +1,12 @@
 // 예약 접수 완료 페이지 (접수번호 + 24시간 내 연락 안내)
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "예약 접수 완료",
+  robots: { index: false, follow: false },
+};
+
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
