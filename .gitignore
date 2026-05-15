@@ -53,6 +53,12 @@ next-env.d.ts
 # AI 와이어프레임/디자인 참고 자료 (로컬에만 보관)
 /wire_frame
 
+# Claude Code 로컬 설정 (머신별)
+/.claude/
+
+# 모바일 깨짐 스크린샷 등 로컬 참고 자료
+/mobile_ui_fix/
+
 # 평문 시크릿 (Anthropic 키 등 절대 커밋 금지)
 *_key.txt
 *_secret.txt
