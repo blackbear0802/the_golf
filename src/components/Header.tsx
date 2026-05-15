@@ -20,7 +20,7 @@ export default function Header() {
 
         <nav className="flex items-center gap-2 md:gap-3">
           {isLoading ? (
-            <div className="h-12 w-32" aria-hidden />
+            <div className="h-10 w-24 md:h-12 md:w-32" aria-hidden />
           ) : isAuthed ? (
             <>
               <span className="hidden md:inline text-base text-neutral-700">
@@ -29,20 +29,21 @@ export default function Header() {
               {session.user?.role === "admin" && (
                 <Link
                   href="/admin"
-                  className="flex h-12 items-center rounded-xl bg-neutral-900 px-4 md:px-5 text-lg font-bold text-white transition-colors hover:bg-neutral-800"
+                  className="flex h-10 md:h-12 items-center rounded-xl bg-neutral-900 px-3 md:px-5 text-sm md:text-lg font-bold text-white transition-colors hover:bg-neutral-800"
                 >
-                  관리자페이지
+                  관리자
+                  <span className="hidden md:inline">페이지</span>
                 </Link>
               )}
               <Link
                 href="/my"
-                className="flex h-12 items-center rounded-xl bg-warm-500 px-4 md:px-5 text-lg font-bold text-white transition-colors hover:bg-warm-600"
+                className="flex h-10 md:h-12 items-center rounded-xl bg-warm-500 px-3 md:px-5 text-sm md:text-lg font-bold text-white transition-colors hover:bg-warm-600"
               >
                 마이페이지
               </Link>
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="flex h-12 items-center rounded-xl border-2 border-neutral-300 px-4 md:px-5 text-lg font-bold text-neutral-700 transition-colors hover:bg-neutral-50"
+                className="hidden md:flex h-12 items-center rounded-xl border-2 border-neutral-300 px-5 text-lg font-bold text-neutral-700 transition-colors hover:bg-neutral-50"
               >
                 로그아웃
               </button>
@@ -51,13 +52,13 @@ export default function Header() {
             <>
               <Link
                 href="/login"
-                className="flex h-12 items-center rounded-xl border-2 border-warm-500 px-4 md:px-5 text-lg font-bold text-warm-600 transition-colors hover:bg-warm-50"
+                className="flex h-10 md:h-12 items-center rounded-xl border-2 border-warm-500 px-3 md:px-5 text-sm md:text-lg font-bold text-warm-600 transition-colors hover:bg-warm-50"
               >
                 로그인
               </Link>
               <Link
                 href="/register"
-                className="flex h-12 items-center rounded-xl bg-warm-500 px-4 md:px-5 text-lg font-bold text-white transition-colors hover:bg-warm-600"
+                className="flex h-10 md:h-12 items-center rounded-xl bg-warm-500 px-3 md:px-5 text-sm md:text-lg font-bold text-white transition-colors hover:bg-warm-600"
               >
                 회원가입
               </Link>
