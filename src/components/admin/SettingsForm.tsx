@@ -1,4 +1,4 @@
-// 어드민 시스템 설정 폼 (담당자 정보 + 네이버 밴드 인증 + 크롤링 활성화)
+// 어드민 시스템 설정 폼 (담당자 정보 + 크롤링 활성화) — 밴드 연결은 별도 카드.
 "use client";
 
 import { useState } from "react";
@@ -13,16 +13,12 @@ export type OperatorInitial = {
 export type SettingsInitial = {
   operator1: OperatorInitial;
   operator2: OperatorInitial;
-  bandId: string;
-  bandCookiesMasked: string;
   crawlEnabled: boolean;
 };
 
 type FormState = {
   operator1: OperatorInitial;
   operator2: OperatorInitial;
-  bandId: string;
-  bandCookies: string;
   crawlEnabled: boolean;
 };
 
@@ -31,8 +27,6 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
   const [form, setForm] = useState<FormState>({
     operator1: { ...initial.operator1 },
     operator2: { ...initial.operator2 },
-    bandId: initial.bandId,
-    bandCookies: "",
     crawlEnabled: initial.crawlEnabled,
   });
   const [loading, setLoading] = useState(false);
@@ -67,8 +61,6 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
       body: JSON.stringify({
         operator1: form.operator1,
         operator2: form.operator2,
-        bandId: form.bandId,
-        bandCookies: form.bandCookies,
         crawlEnabled: form.crawlEnabled,
       }),
     });
@@ -81,7 +73,6 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
     }
 
     setSuccess("설정이 저장되었습니다.");
-    setForm((prev) => ({ ...prev, bandCookies: "" }));
     setLoading(false);
     router.refresh();
   }
@@ -106,50 +97,6 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
             value={form.operator2}
             onChange={(field, v) => updateOperator("operator2", field, v)}
           />
-        </div>
-      </Section>
-
-      <Section
-        title="네이버 밴드 연결"
-        description={
-          <>
-            band.us 로그인 후 개발자도구(F12) → <b>Network</b> 탭 → band.us 요청 클릭 →
-            Request Headers의 <code className="font-mono">Cookie:</code> 한 줄을 통째로
-            복사해 붙여넣으세요. 빈 칸으로 저장하면 기존 값을 유지합니다.
-          </>
-        }
-      >
-        <div className="space-y-5">
-          <Field label="밴드 ID" htmlFor="bandId">
-            <input
-              id="bandId"
-              type="text"
-              value={form.bandId}
-              onChange={(e) => update("bandId", e.target.value)}
-              placeholder="86xxxxx"
-              className={`${inputClass} md:max-w-xs`}
-            />
-          </Field>
-          <Field
-            label={`Cookie 헤더 ${
-              initial.bandCookiesMasked ? `(현재: ${initial.bandCookiesMasked})` : "(미등록)"
-            }`}
-            htmlFor="bandCookies"
-          >
-            <textarea
-              id="bandCookies"
-              rows={4}
-              autoComplete="off"
-              value={form.bandCookies}
-              onChange={(e) => update("bandCookies", e.target.value)}
-              placeholder={
-                initial.bandCookiesMasked
-                  ? "변경 시에만 새 Cookie 헤더 붙여넣기"
-                  : "ai=...; as=...; band_session=...; rt=...; secretKey=...; SESSION=..."
-              }
-              className={`${inputClass} h-auto font-mono text-sm`}
-            />
-          </Field>
         </div>
       </Section>
 
@@ -235,7 +182,7 @@ function OperatorRow({
             type="email"
             value={value.email}
             onChange={(e) => onChange("email", e.target.value)}
-            placeholder="contact@thegolf.com"
+            placeholder="contact@thegolfer.co.kr"
             className={inputClass}
           />
         </Field>

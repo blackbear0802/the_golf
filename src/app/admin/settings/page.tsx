@@ -1,12 +1,9 @@
-// 어드민 시스템 설정 페이지 (담당자 정보 + 밴드 인증 + 크롤링 상태)
+// 어드민 시스템 설정 페이지 (담당자 정보 + 밴드 OAuth 연결 + 크롤링 상태)
 import { APP_CONFIG_KEYS, getConfigMany } from "@/lib/app-config";
 import SettingsForm from "@/components/admin/SettingsForm";
-
-function mask(value: string | null): string {
-  if (!value) return "";
-  if (value.length <= 8) return "••••";
-  return `${value.slice(0, 4)}••••${value.slice(-4)} (${value.length}자)`;
-}
+import CrawlTriggerCard from "@/components/admin/CrawlTriggerCard";
+import BandConnectionCard from "@/components/admin/BandConnectionCard";
+import { fetchBands, type BandSummary } from "@/lib/band-api-client";
 
 function formatDateTime(iso: string | null): string | null {
   if (!iso) return null;
@@ -19,7 +16,12 @@ function formatDateTime(iso: string | null): string | null {
   return `${d.getFullYear()}.${m}.${day} ${hh}:${mm}`;
 }
 
-export default async function AdminSettingsPage() {
+export default async function AdminSettingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ band?: string; reason?: string }>;
+}) {
+  const params = (await searchParams) ?? {};
   const cfg = await getConfigMany([
     APP_CONFIG_KEYS.operator1Name,
     APP_CONFIG_KEYS.operator1Phone,
@@ -27,26 +29,49 @@ export default async function AdminSettingsPage() {
     APP_CONFIG_KEYS.operator2Name,
     APP_CONFIG_KEYS.operator2Phone,
     APP_CONFIG_KEYS.operator2Email,
-    APP_CONFIG_KEYS.bandId,
-    APP_CONFIG_KEYS.bandCookies,
+    APP_CONFIG_KEYS.bandAccessToken,
+    APP_CONFIG_KEYS.bandTokenExpiresAt,
+    APP_CONFIG_KEYS.bandConnectedAt,
+    APP_CONFIG_KEYS.bandKey,
     APP_CONFIG_KEYS.crawlEnabled,
-    APP_CONFIG_KEYS.cookieExpiredAt,
     APP_CONFIG_KEYS.lastCrawlAt,
     APP_CONFIG_KEYS.lastCrawlSuccess,
     APP_CONFIG_KEYS.lastCrawlNew,
     APP_CONFIG_KEYS.lastCrawlError,
   ]);
 
-  const cookieExpired = !!cfg.cookieExpiredAt;
+  const connected = !!cfg.bandAccessToken;
   const lastCrawlAt = formatDateTime(cfg.lastCrawlAt);
+  const connectedAt = formatDateTime(cfg.bandConnectedAt);
   const lastSuccess = cfg.lastCrawlSuccess === "true";
+
+  let bands: BandSummary[] = [];
+  let bandsError: string | null = null;
+  if (connected && cfg.bandAccessToken) {
+    try {
+      bands = await fetchBands(cfg.bandAccessToken);
+    } catch (err) {
+      bandsError = err instanceof Error ? err.message : String(err);
+    }
+  }
 
   return (
     <div>
       <h1 className="text-2xl md:text-3xl font-black text-neutral-900">시스템 설정</h1>
       <p className="mt-1 text-base text-neutral-600">
-        담당자 정보·밴드 인증·자동 크롤링 동작을 관리합니다
+        담당자 정보·밴드 연결·자동 크롤링 동작을 관리합니다.
       </p>
+
+      {params.band === "connected" && (
+        <p className="mt-4 rounded-xl bg-warm-50 px-4 py-3 text-base font-bold text-warm-700">
+          밴드 연결이 완료되었습니다. 아래에서 대상 밴드를 선택해주세요.
+        </p>
+      )}
+      {params.band === "error" && (
+        <p className="mt-4 rounded-xl bg-brand-50 px-4 py-3 text-base font-medium text-brand-700">
+          밴드 연결 실패: {params.reason ?? "원인 미상"}
+        </p>
+      )}
 
       <section className="mt-6 grid gap-4 sm:grid-cols-3">
         <StatusCard
@@ -62,12 +87,10 @@ export default async function AdminSettingsPage() {
           tone={lastCrawlAt ? (lastSuccess ? "ok" : "warn") : "muted"}
         />
         <StatusCard
-          label="밴드 쿠키"
-          value={
-            cookieExpired ? "만료됨" : cfg.bandCookies ? "등록됨" : "미등록"
-          }
-          sub={cookieExpired ? "Cookie 헤더를 다시 등록해주세요" : undefined}
-          tone={cookieExpired ? "warn" : cfg.bandCookies ? "ok" : "muted"}
+          label="밴드 연결"
+          value={connected ? "연결됨" : "미연결"}
+          sub={connectedAt ? `연결 시각 ${connectedAt}` : undefined}
+          tone={connected ? "ok" : "muted"}
         />
         <StatusCard
           label="자동 크롤링"
@@ -75,6 +98,19 @@ export default async function AdminSettingsPage() {
           tone={cfg.crawlEnabled === "true" ? "ok" : "muted"}
         />
       </section>
+
+      <div className="mt-8">
+        <BandConnectionCard
+          connected={connected}
+          selectedBandKey={cfg.bandKey ?? ""}
+          bands={bands}
+          loadError={bandsError}
+        />
+      </div>
+
+      <div className="mt-8">
+        <CrawlTriggerCard />
+      </div>
 
       <div className="mt-8">
         <SettingsForm
@@ -89,8 +125,6 @@ export default async function AdminSettingsPage() {
               phone: cfg.operator2Phone ?? "",
               email: cfg.operator2Email ?? "",
             },
-            bandId: cfg.bandId ?? "",
-            bandCookiesMasked: mask(cfg.bandCookies),
             crawlEnabled: cfg.crawlEnabled === "true",
           }}
         />

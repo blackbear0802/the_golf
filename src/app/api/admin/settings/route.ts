@@ -14,8 +14,7 @@ type OperatorInput = {
 type SettingsPayload = {
   operator1?: OperatorInput;
   operator2?: OperatorInput;
-  bandId?: string;
-  bandCookies?: string;
+  bandKey?: string;
   crawlEnabled?: boolean;
 };
 
@@ -74,13 +73,8 @@ export async function PATCH(req: Request) {
     updates[APP_CONFIG_KEYS.operator2Email] = op2.email;
   }
 
-  if (typeof body.bandId === "string") {
-    updates[APP_CONFIG_KEYS.bandId] = body.bandId.trim();
-  }
-
-  if (typeof body.bandCookies === "string" && body.bandCookies.trim()) {
-    updates[APP_CONFIG_KEYS.bandCookies] = body.bandCookies.trim();
-    updates[APP_CONFIG_KEYS.cookieExpiredAt] = "";
+  if (typeof body.bandKey === "string") {
+    updates[APP_CONFIG_KEYS.bandKey] = body.bandKey.trim();
   }
 
   if (typeof body.crawlEnabled === "boolean") {

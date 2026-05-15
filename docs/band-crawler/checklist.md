@@ -3,59 +3,53 @@
 진행률은 체크박스 갯수로 확인.
 
 ## Phase 0 — 사전 준비 (운영자 작업)
-- [ ] Anthropic Claude API 키 발급 및 충전
-- [ ] `.env` 와 Vercel 환경변수에 `ANTHROPIC_API_KEY` 추가
-- [ ] Vercel 환경변수에 `CRON_SECRET` 추가 (랜덤 32바이트)
-- [ ] band.us 로그인 → F12 Network 탭에서 Cookie 헤더 통째 복사하는 방법 숙지
+- [x] Anthropic Claude API 키 발급 → `.env` 반영
+- [x] `CRON_SECRET` 발급 → `.env` 반영
+- [x] developers.band.us에서 앱 등록 + Redirect URL 두 개 등록 (로컬/배포)
+- [ ] `BAND_CLIENT_ID`/`BAND_CLIENT_SECRET` 발급 완료 후 `.env`에 채우기
 
 ## Phase 1 — 인프라/모델
 - [x] Prisma: `AppConfig` 모델 (key String @id, value String, updatedAt)
-- [x] Prisma: `Product`에 `autoImported Boolean @default(false)` + `bandPostId String? @unique` 추가
-- [x] `npx prisma db push` 로 DB 반영
-- [x] `lib/app-config.ts` 헬퍼 (get/set with type coercion)
-- [x] 설치: `@anthropic-ai/sdk`, `node-html-parser` (또는 cheerio)
+- [x] Prisma: `Product`에 `autoImported` + `bandPostId @unique`
+- [x] `lib/app-config.ts` 헬퍼 + OAuth 키(`bandAccessToken`, `bandRefreshToken`, `bandTokenExpiresAt`, `bandKey`, `bandConnectedAt`) 추가
+- [x] 설치: `@anthropic-ai/sdk`
 
-## Phase 2 — /admin/settings 페이지
-- [x] `/admin/settings/page.tsx` 서버 컴포넌트 (현재 값 로드)
-- [x] 폼: 운영자 연락처 (name/phone/email)
-- [x] 폼: 밴드 ID, NID_AUT, NID_SES 쿠키 (실구현은 Cookie 헤더 raw 저장)
-- [x] 토글: 크롤링 활성화 ON/OFF
-- [x] PATCH /api/admin/settings: 검증 후 AppConfig 일괄 저장
-- [x] 상태 카드: 마지막 크롤링 시각, 성공/실패 카운트, 쿠키 만료 경고
+## Phase 2 — 밴드 OAuth 연동 (2026-05-15 갈아엎음)
+- [x] `lib/band-oauth.ts`: authorize URL 빌드, code↔token 교환, refresh
+- [x] `/api/admin/band/oauth/start`: authorize로 302
+- [x] `/api/admin/band/oauth/callback`: code→token→AppConfig 저장 후 settings로 복귀
+- [x] `lib/band-api-client.ts`: fetchBands / fetchPosts / fetchPostDetail (401·인증 result_code → BandApiAuthError)
 
-## Phase 3 — 크롤링 코어
-- [x] `lib/band-client.ts`: fetchPostList(bandId, cookies) → BandPostMeta[]
-- [x] `lib/band-client.ts`: fetchPostDetail(postId, cookies) → { html, imageUrls, youtubeUrls, text }
-- [x] `lib/claude-parser.ts`: parseProduct(text) → ParsedProduct (JSON)
-- [x] `lib/contact-replacer.ts`: replaceContacts(text, operator) → cleanedText
-- [x] `lib/media-storage.ts`: storeFromUrl(url) → string (MVP는 그대로 반환)
-- [x] `lib/media-classifier.ts`: 이미지 URL/캡션 키워드로 golf/accommodation/dining 분류 (LLM 부담 줄이려 규칙 1차 → 추후 LLM)
+## Phase 3 — /admin/settings 페이지
+- [x] 담당자 정보 입력 (이름/전화/이메일)
+- [x] `BandConnectionCard`: 미연결 시 "밴드 연결하기", 연결 시 가입 밴드 드롭다운 + 대상 밴드 저장 + "다시 연결"
+- [x] 크롤링 활성화 토글
+- [x] 상태 카드: 마지막 크롤링, 밴드 연결 상태, 자동 크롤링 ON/OFF
+- [x] PATCH /api/admin/settings: 담당자/bandKey/crawlEnabled 저장
 
-## Phase 4 — Cron 엔드포인트
-- [x] `/api/cron/crawl-band/route.ts`: CRON_SECRET 검증
-- [x] 흐름: 활성화 OFF면 skip → 쿠키 fetch → 글 목록 → 이미 등록된 bandPostId 제외 → 신규 글마다 (상세 fetch → Claude 파싱 → 치환 → Product+Media 생성)
-- [x] 결과: AppConfig에 `lastCrawlAt`, `lastCrawlSuccess`, `lastCrawlNew` 기록
-- [x] 인증 실패 감지 시 `cookieExpiredAt` 기록 후 종료
+## Phase 4 — 크롤러 + Cron
+- [x] `lib/band-crawler.ts` runBandCrawl: API 호출 → 1회 refresh 재시도 → 인증 실패 시 cookieExpiredAt 마커 + auth_failed 리턴
+- [x] `lib/claude-parser.ts` / `contact-replacer.ts` / `media-storage.ts` / `media-classifier.ts` 그대로 재사용
+- [x] `/api/cron/crawl-band/route.ts`: CRON_SECRET 검증 후 runBandCrawl 호출
+- [x] `/api/admin/crawl/trigger`: 어드민 수동 트리거 + `/admin/settings`에서 결과 카드 확인
+- [x] vercel.json crons 등록 (1시간 간격)
 
-## Phase 5 — Vercel Cron 등록
-- [x] `vercel.json`에 `{ "crons": [{ "path": "/api/cron/crawl-band", "schedule": "0 * * * *" }] }`
-- [ ] 첫 배포 후 Vercel 대시보드에서 Cron 실행 로그 확인
-- [ ] (Hobby 플랜인 경우) 실제 적용 빈도는 일 1회로 제한될 수 있음 — Pro 업그레이드 또는 schedule 조정 필요 시 변경
+## Phase 5 — 어드민 상품 목록 UI
+- [x] `/admin/products` 자동등록 뱃지/필터
+- [x] 대시보드: 쿠키 만료 배너 (OAuth 만료에도 재사용) + 크롤링 상태 카드
 
-## Phase 6 — 어드민 상품 목록 UI
-- [x] `/admin/products` 목록에 `autoImported` 뱃지 노출
-- [x] 필터: 자동 등록 / 수동 등록 토글
-- [x] 어드민 대시보드: 쿠키 만료 / 마지막 실행 상태 카드
-
-## Phase 7 — 검증
-- [ ] 1건 수동 트리거로 게시글 1개 등록 확인
-- [ ] Claude 추출 결과가 schema와 일치하는지
-- [ ] 이미지 URL이 상품 상세에서 정상 렌더링되는지
-- [ ] 담당자 연락처가 본문에서 치환되었는지
-- [ ] Vercel Cron 1회 자동 실행 후 새 상품 등록되는지
-- [ ] 쿠키 만료 시뮬레이션 (잘못된 쿠키 입력) → 어드민에 경고 뜨는지
+## Phase 6 — 검증
+- [ ] OAuth 연결 흐름 1회 완주 (start → 동의 → callback → 토큰 저장 확인)
+- [ ] 가입 밴드 드롭다운에 대상 밴드 노출, 저장
+- [ ] "지금 한 번 실행" → 게시글 1건 자동 등록
+- [ ] Claude 추출 결과 schema 일치
+- [ ] 이미지 URL이 상품 상세에서 렌더링
+- [ ] 담당자 연락처 치환 확인
+- [ ] Vercel Cron 1회 자동 실행 후 새 상품 등록
+- [ ] 토큰 만료 시뮬레이션 (의도적으로 access_token 변조) → refresh 또는 만료 배너
 
 ## 후속 (이번 작업 외)
-- [ ] Vercel Blob으로 이미지 이관 (`media-storage.ts` 구현 교체)
-- [ ] 자동 등록 상품에 `draft → published` 워크플로 추가
+- [ ] 옛 쿠키 코드 (`lib/band-client.ts`)와 미사용 AppConfig 키(bandId/bandCookies/cookieExpiredAt) 정리
+- [ ] Vercel Blob 이미지 이관 (`media-storage.ts` 구현 교체)
+- [ ] 자동 등록 상품에 `draft → published` 워크플로
 - [ ] 슬랙 알림 webhook

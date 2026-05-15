@@ -16,6 +16,12 @@ export const APP_CONFIG_KEYS = {
   lastCrawlSuccess: "lastCrawlSuccess",
   lastCrawlNew: "lastCrawlNew",
   lastCrawlError: "lastCrawlError",
+  // Band Open API (OAuth) — 운영자 1명의 토큰을 공용으로 사용.
+  bandAccessToken: "bandAccessToken",
+  bandRefreshToken: "bandRefreshToken",
+  bandTokenExpiresAt: "bandTokenExpiresAt",
+  bandKey: "bandKey",
+  bandConnectedAt: "bandConnectedAt",
 } as const;
 
 export type AppConfigKey = (typeof APP_CONFIG_KEYS)[keyof typeof APP_CONFIG_KEYS];

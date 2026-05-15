@@ -27,12 +27,18 @@ export type BandPostDetail = {
 };
 
 export class BandAuthError extends Error {
-  constructor(public statusCode: number, public bodySnippet: string) {
-    super(`Band auth failed (status=${statusCode})`);
+  constructor(
+    public statusCode: number,
+    public bodySnippet: string,
+    public finalUrl: string = ""
+  ) {
+    super(`Band auth failed (status=${statusCode}, finalUrl=${finalUrl || "?"})`);
     this.name = "BandAuthError";
   }
 }
 
+// band.us는 인증된 요청에도 캐노니컬 URL로 redirect할 수 있어 자동 follow.
+// 인증 실패는 (a) 최종 status 4xx (b) 최종 URL이 로그인 페이지 (c) 본문 마커로 판정.
 export async function fetchBandPage(
   path: string,
   cookies: string
@@ -44,15 +50,15 @@ export async function fetchBandPage(
       Cookie: cookies,
       Referer: `${BAND_BASE}/`,
     },
-    redirect: "manual",
+    redirect: "follow",
   });
   const html = await res.text();
-  return { status: res.status, html, finalUrl: res.headers.get("location") ?? `${BAND_BASE}${path}` };
+  return { status: res.status, html, finalUrl: res.url };
 }
 
-function isAuthFailure(status: number, html: string): boolean {
+function isAuthFailure(status: number, html: string, finalUrl: string): boolean {
   if (status === 401 || status === 403) return true;
-  if (status >= 300 && status < 400) return true; // 로그인으로 리다이렉트
+  if (/nid\.naver\.com|auth\.band\.us|\/login|signin/i.test(finalUrl)) return true;
   if (html.includes("nid.naver.com/nidlogin.login")) return true;
   if (html.includes("로그인이 필요") || html.includes("Sign in to Band")) return true;
   return false;
@@ -62,9 +68,9 @@ export async function fetchPostList(
   bandId: string,
   cookies: string
 ): Promise<{ posts: BandPostMeta[]; rawHtml: string }> {
-  const { status, html } = await fetchBandPage(`/band/${bandId}`, cookies);
-  if (isAuthFailure(status, html)) {
-    throw new BandAuthError(status, html.slice(0, 500));
+  const { status, html, finalUrl } = await fetchBandPage(`/band/${bandId}`, cookies);
+  if (isAuthFailure(status, html, finalUrl)) {
+    throw new BandAuthError(status, html.slice(0, 500), finalUrl);
   }
 
   const ids = new Set<string>();
@@ -90,9 +96,9 @@ export async function fetchPostDetail(
   cookies: string
 ): Promise<BandPostDetail> {
   const path = `/band/${bandId}/post/${postId}`;
-  const { status, html } = await fetchBandPage(path, cookies);
-  if (isAuthFailure(status, html)) {
-    throw new BandAuthError(status, html.slice(0, 500));
+  const { status, html, finalUrl } = await fetchBandPage(path, cookies);
+  if (isAuthFailure(status, html, finalUrl)) {
+    throw new BandAuthError(status, html.slice(0, 500), finalUrl);
   }
 
   const text = extractText(html);

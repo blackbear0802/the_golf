@@ -10,11 +10,12 @@
 ### 왜 LLM은 Haiku 4.5인가
 입력 2KB 정도의 게시글 텍스트라 Sonnet/Opus급은 과잉. Haiku도 JSON 출력 안정성 충분. 일 비용 $0.05 이내 유지 목표.
 
-### 왜 쿠키 자동 갱신을 안 하나
-네이버는 자동화 로그인을 ML로 감지·차단함. Playwright + 본인 ID/PW를 서버에 두고 자동 로그인 시도하면 계정 잠김 위험이 있음. 운영자가 1~2주에 한 번 쿠키 갱신하는 부담이 더 안전한 트레이드오프.
+### 왜 쿠키 자동 갱신을 안 하나 (참고용 — 폐기)
+네이버는 자동화 로그인을 ML로 감지·차단함. Playwright + 본인 ID/PW를 서버에 두고 자동 로그인 시도하면 계정 잠김 위험이 있음.
+→ 결국 쿠키 방식 자체를 폐기하고 공식 Open API + OAuth로 전환했다 (아래 2026-05-15 항목).
 
-### 왜 NID_AUT/NID_SES 가 아니라 Cookie 헤더 통째로인가
-처음에 NID_AUT/NID_SES로 안내했지만 그건 naver.com 도메인 쿠키임. band.us는 별도 인증 시스템(ai/as/band_session/BBC/di/JSESSIONID/rt/secretKey/SESSION 등)을 쓰고, 어떤 조합이 필수인지 외부에 명확하지 않음. 그래서 운영자가 Network 탭의 Cookie 헤더를 통째로 복사해 AppConfig.bandCookies에 raw 문자열로 저장. band-client.ts는 이 값을 그대로 fetch의 Cookie 헤더에 실어 보냄.
+### 왜 NID_AUT/NID_SES 가 아니라 Cookie 헤더 통째로인가 (참고용 — 폐기)
+처음에 NID_AUT/NID_SES로 안내했지만 그건 naver.com 도메인 쿠키임. band.us는 별도 인증 시스템(ai/as/band_session/BBC/di/JSESSIONID/rt/secretKey/SESSION 등)을 쓰고, 어떤 조합이 필수인지 외부에 명확하지 않음. → OAuth로 갈아엎으면서 이 결정도 함께 폐기.
 
 ### 왜 이미지를 Blob에 안 옮기나 (1단계)
 URL 그대로가 인프라 0, 비용 0. 네이버 CDN이 외부 핫링크를 막을 가능성은 있지만 일반 게시글 이미지는 Origin 체크 안 함 (확인 필요). `lib/media-storage.ts` 추상화를 두는 이유는 막혔을 때 호출부 손대지 않고 구현만 갈아끼우기 위함.
@@ -27,6 +28,33 @@ URL 그대로가 인프라 0, 비용 0. 네이버 CDN이 외부 핫링크를 막
 
 ### bandPostId 중복 방지
 같은 게시글이 두 번 크롤링되는 사고 방지. Product에 unique 인덱스. 글이 수정될 가능성도 있지만 1단계에서는 첫 fetch만 신뢰.
+
+## 2026-05-15 — 쿠키 방식 → 공식 Open API(OAuth) 전환
+
+### 왜 갈아엎었나
+- 첫 검증에서 쿠키 fetch가 status=301로 떨어졌고, band.us의 인증/리다이렉트 동작이 불투명해 false negative 위험이 컸음.
+- 사용자가 developers.band.us에서 신규 앱 등록이 가능함을 확인 → 공식 API가 압도적으로 안정적이고 약관상 합법적이라 즉시 갈아엎기로 결정.
+
+### 확정된 사양 (검증 완료)
+- Authorize URL: `https://auth.band.us/oauth2/authorize?response_type=code&client_id=…&redirect_uri=…`
+- Token URL: `GET https://auth.band.us/oauth2/token?grant_type=authorization_code&code=…` + `Authorization: Basic base64(client_id:client_secret)`
+- Refresh: 동일 token URL, `grant_type=refresh_token&refresh_token=…` (응답에 refresh_token이 있을 때만 사용)
+- API base: `https://openapi.band.us`
+  - `GET /v2.1/bands?access_token=…` — 가입 밴드 목록 (`result_data.bands[].band_key`)
+  - `GET /v2/band/posts?band_key=…&access_token=…&locale=ko-KR` — 게시글 목록 (`result_data.items[]`, `paging.next_params`)
+  - `GET /v2.1/band/post?band_key=…&post_key=…&access_token=…` — 게시글 상세 (`result_data.post`)
+- 응답 형식: `{result_code: 1, result_data: ...}`. result_code != 1 이면 에러. 1003/1006/1024는 인증 오류로 분류해 refresh 트리거.
+
+### 코드 구성
+- `lib/band-oauth.ts` — authorize URL 생성, code↔token 교환, refresh
+- `lib/band-api-client.ts` — fetchBands/fetchPosts/fetchPostDetail. 401/인증 result_code 시 BandApiAuthError throw
+- `lib/band-crawler.ts` — runBandCrawl: 토큰 로드 → API 호출 → BandApiAuthError 시 1회 refresh 후 재시도 → 그래도 실패면 cookieExpiredAt 마커 + auth_failed 리턴
+- `/api/admin/band/oauth/{start,callback}` — start는 authorize로 302, callback은 토큰 저장 후 settings로 복귀
+- `/admin/settings`의 BandConnectionCard — 미연결이면 "밴드 연결하기", 연결됨이면 가입 밴드 드롭다운 + "다시 연결"
+
+### 보존된 옛 코드 (검증 끝나면 정리)
+- `lib/band-client.ts` — HTML 스크래핑 클라이언트. 호출자 없음. 롤백/참고용으로만 남김.
+- AppConfig 키 `bandId`, `bandCookies`, `cookieExpiredAt`은 그대로 남겨둠. `cookieExpiredAt`은 OAuth에서도 "인증 만료 마커"로 재사용 중.
 
 ## 미해결/다음에 결정할 것
 - 게시글 본문에서 이미지 타입(golf/accommodation/dining) 분류를 키워드로 할지 LLM에 한 번에 맡길지. 1차는 키워드, 부족하면 LLM에 같이 분류 요청하는 식으로 점진 확장.

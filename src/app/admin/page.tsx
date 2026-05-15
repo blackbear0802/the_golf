@@ -79,9 +79,9 @@ export default async function AdminDashboard() {
         >
           <span className="mt-0.5 text-xl">⚠️</span>
           <div>
-            <p className="text-base font-black text-brand-700">밴드 쿠키가 만료되었습니다</p>
+            <p className="text-base font-black text-brand-700">밴드 인증이 만료되었습니다</p>
             <p className="mt-1 text-sm text-brand-700/80">
-              자동 크롤링이 중단된 상태입니다. 설정 페이지에서 Cookie 헤더를 다시 등록해주세요.
+              자동 크롤링이 중단된 상태입니다. 설정 페이지에서 밴드를 다시 연결해주세요.
             </p>
           </div>
         </Link>
