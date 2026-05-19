@@ -1,0 +1,55 @@
+# 전체상품화면 매트릭스 컨텍스트 노트 (결정·근거)
+
+## 2026-05-19 (검토 + 축소판 계획)
+
+- **출처:** `E:\PJT\The Golf v2\해외 골프 상품 페이지 개발 설계.pdf` (13p). 환경에 pdftoppm 없어 임시 폴더 `pdfjs-dist@4.10.38`로 텍스트 추출해 전문 검토(프로젝트 미오염, 임시 폴더는 정리 대상).
+- **핵심 판정:** 설계서 UI 콘셉트(월×지역 매트릭스 + 딥링크 목록)는 채택 가치 있음. 그러나 가정한 3-테이블 정규화 스키마·Redis·Kafka·전용 REST·TanStack은 현 스택과 불일치 → 그대로 구현 불가. "콘셉트 채택 + 현실 축소"로 결정(사용자 승인: 축소판 계획 작성).
+
+- **매트릭스 숫자 의미 재정의:** 설계서는 "잔여석 있는 OPEN 스케줄 수". 현 `Product`에 `current_booked`·schedule 분리·status 없음 → 만들 수 없음. **"해당 월·지역 출발 상품 수(Product COUNT)"**로 정의. 의미 변경이라 사용자 확인 항목으로 둠.
+
+- **데이터 모델 = 컬럼 추가(테이블 분리 X):** 현 프로젝트는 단일 flat `Product` 스타일. `Locations`/`Package_Schedules` 도입은 Simplicity First 위반·현 단건 출발 모델과 충돌. `countryCode`/`regionCode` 두 컬럼 + 인덱스로 최소 침습. 지역 메타·정렬순서는 DB 대신 `regions.ts` 상수(설계서 `display_order` 테이블은 이 규모 과설계).
+
+- **진짜 병목은 destination 정규화·데이터 품질(설계서 미언급):** 데이터 출처가 밴드 크롤이라 destination이 자유 텍스트로 들쭉날쭉([[project-band-crawl]] 파서 연도 약점·미기재 폴백 기록). 자동 코드 추론 불가 → **큐레이션 사전** 전제. 그래서 착수 전 1순위 작업이 "현 distinct destination 전수 조사". 미매핑 행은 매트릭스 비노출(목록엔 destination으로 여전히 노출 — degrade 허용, 복원력 원칙).
+
+- **인프라 축소:** Redis/Kafka/Pub/Sub 워커 제외. Vercel Hobby + Neon에 없는 인프라이고 상품 규모(수십~수백)에 50ms SLA·수십만 건 전제는 무의미([[project-vercel-deploy]] Hobby 제약). Next.js ISR `revalidate`만으로 충분.
+
+- **목록은 신규 X, 기존 `/search` 재사용:** `src/app/search/page.tsx`가 이미 Prisma 조건 조회 + 카드 그리드. 셀 클릭은 `/search?countryCode=&regionCode=&month=`로 딥링크하고 search가 그 파라미터를 추가 해석. 새 목록 페이지 신설은 surgical 원칙 위반. 설계서가 목록을 `/packages`로 부른 것과 라우트 네이밍 충돌 → 매트릭스=`/packages`, 목록=`/search`로 제안, 사용자 확인 항목.
+
+- **매트릭스↔목록 건수 일치 강제:** 설계서 2.2 핵심 요구. 매트릭스 `groupBy` WHERE와 `/search` WHERE를 동일 조건으로 맞춰야 함(연·월 = departureDate 범위, region 코드, 카테고리). 검증 체크리스트에 명시.
+
+- **설계서에서 그대로 가져갈 부분:** 4단계 Z-index Sticky, `border` 대신 `shadow-[inset_-1px_0_0_...]`로 1px gap 버그 우회, Sticky 셀 불투명 배경, `overscroll-behavior-x:none`(Safari 바운스), 빈 셀 비활성, `aria-label` 동적 바인딩, 딥링크 URL + 스크롤 복원. 보수적 단일 래퍼 sticky(실험적 per-axis 회피)도 설계서 권고와 일치.
+
+- **확정 전 사용자 확인 4건:** (1) 숫자 의미="출발 상품 수" (2) 라우트=매트릭스 `/packages`·목록 `/search` 재사용 (3) Product 컬럼 추가 방식 (4) 기준연도 1개 시작. checklist 0번 게이트로 둠 — 코드 착수 전 통과 필요.
+
+- **연도:** 설계서 단일 연도. 파서 연도 약점 있어 "기준연도 1개"로 시작, 연도 토글 후순위.
+
+## 2026-05-19 (데이터 조사 — checklist 1)
+
+- 4건 게이트 전부 사용자 승인. `scripts/investigate-destinations.ts`로 전수 조사.
+- **규모:** 총 상품 10건, distinct destination 9개, 빈 destination 0. 전량 **2026년**, 출발월은 **6·7월 두 달만**. → 설계서의 "수십만 건·50ms·12개월" 전제는 현 단계와 무관함이 데이터로 재확인. 기준연도=2026 자동 확정.
+- **destination 포맷:** 일관되게 "국가 지역명"(한글, 공백 구분). 국가 토큰(중국/태국/베트남/일본/필리핀/말레이시아)은 첫 단어 → 국가 코드 매핑 단순. 지역명이 변동 요소.
+- **🔴 핵심 발견 — 동일 지역 3중 표기:** `중국 염성 쑤첸`(2) / `중국 쑤첸`(1) / `중국 염성(쑤첸)`(1) 가 같은 상품군으로 보이나 표기 3가지. 큐레이션 사전이 이걸 1개 regionCode로 합치지 않으면 매트릭스에서 같은 지역이 3행으로 쪼개짐. **다만 염성(옌청)과 쑤첸은 본래 다른 중국 도시** → 자동 판단 불가, 도메인 소유자(사용자) 결정 필요. checklist 1의 ❓항목으로 둠.
+- **이 발견이 계획의 "destination 정규화가 진짜 병목" 가설을 데이터로 입증.** 매핑은 코드 자동 추론 불가, 사람 큐레이션 전제 확정.
+- 나머지 7개는 1:1 명확 매핑 가능: 태국 치앙마이=TH/chiangmai, 베트남 다낭=VN/danang, 일본 후쿠오카=JP/fukuoka, 필리핀 세부=PH/cebu, 말레이시아 코타키나발루=MY/kotakinabalu, 일본 동경=JP/tokyo.
+
+## 2026-05-19 (큐레이션 사전 확정 — checklist 1 완료)
+
+- **사용자 결정:** 중국 3표기 4건 = **한 지역**(표기만 다름). 정규형은 최빈·최완전 표기 `중국 염성 쑤첸`(2건), 코드 `CN/yancheng`, 표시명 "염성"(괄호 표기 `염성(쑤첸)`이 염성을 주로 봄). 3변형 전부 동일 코드로 흡수.
+- **일본 동경:** 표시명은 표준 한글 "도쿄"로 정규화(원문 "동경" 유지하지 않음 — 헤더 가독성). 사소한 큐레이션 선택, 추후 변경 무비용.
+- **확정 큐레이션 사전** (raw destination → 코드. §3에서 `src/lib/regions.ts`로 전사):
+
+  | raw destination | countryCode | regionCode | 국가명 | 지역명 | display_order |
+  |---|---|---|---|---|---|
+  | 태국 치앙마이 | TH | chiangmai | 태국 | 치앙마이 | 10 |
+  | 베트남 다낭 | VN | danang | 베트남 | 다낭 | 20 |
+  | 일본 후쿠오카 | JP | fukuoka | 일본 | 후쿠오카 | 30 |
+  | 일본 동경 | JP | tokyo | 일본 | 도쿄 | 31 |
+  | 필리핀 세부 | PH | cebu | 필리핀 | 세부 | 40 |
+  | 말레이시아 코타키나발루 | MY | kotakinabalu | 말레이시아 | 코타키나발루 | 50 |
+  | 중국 염성 쑤첸 | CN | yancheng | 중국 | 염성 | 60 |
+  | 중국 쑤첸 | CN | yancheng | 중국 | 염성 | 60 |
+  | 중국 염성(쑤첸) | CN | yancheng | 중국 | 염성 | 60 |
+
+- **사전 키 전략:** raw destination 문자열 **정확 일치** 키. 신규 크롤 글에 사전에 없는 destination 등장 시 → countryCode/regionCode null + 경고(매트릭스 비노출, 목록엔 destination으로 노출 — degrade 허용, 계획 리스크 항목과 일치). 사전은 운영하며 증분 보강.
+- **현 데이터로 채워질 매트릭스:** 지역 7행(치앙마이·다낭·후쿠오카·도쿄·세부·코타키나발루·염성) × 월 2칸(2026-06, 2026-07). 6월=치앙마이·다낭·도쿄 각 1, 7월=후쿠오카·세부·코타키나발루·염성(3)·... = 합계 10. 매트릭스↔목록 일치 검증 기준값.
+- checklist §1 완료. 다음은 §2 스키마/백필(코드·Neon 마이그레이션) — DB 변경 단계라 착수 전 사용자 확인.
