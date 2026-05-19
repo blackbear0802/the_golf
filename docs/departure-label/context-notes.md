@@ -25,4 +25,5 @@
 - **날짜와 다른 핵심:** capacity는 표시뿐 아니라 **예약 로직**에 쓰임 — `BookingForm` max 인원, `api/bookings` 정원초과 검증. capacity=0을 방치하면 "최대 0명"으로 예약 불가가 됨. 이 사이트 예약은 문의형(상담원 24h 내 연락, 좌석 락 아님)이므로 **capacity<=0 = 상한 없음(상담 시 확정)**으로 처리. BookingForm·api/bookings에서 capacity>0일 때만 상한 적용. (날짜 작업엔 없던 추가 범위 — 정확성상 필수.)
 - 표시 폴백: `capacityLabel ?? (capacity>0 ? '최대 N명' : '인원 문의')`.
 - 어드민: capacity 필수 해제(미상 허용) + capacityLabel 입력. 의도(미상 허용)와 일관되게 date(어드민 필수 유지)와 달리 capacity는 어드민도 선택화.
+- (2026-05-19 후속) 어드민 폼의 '정원(명)' 숫자칸 + '모집인원 표기' 텍스트칸 2개가 혼란(사용자가 값이 어느 칸인지 못 찾음) → **한 칸 텍스트 '정원'으로 통합**. parseProductInput이 입력을 분해: `^\d+\s*명?$`이면 capacity=숫자/label=null, 그 외 텍스트면 capacity=0/label=텍스트. 수정화면 초기값은 `capacityLabel ?? (capacity>0? String : "")`로 라벨 우선 표시. DB(capacity Int + capacityLabel)·정렬·상세표시·크롤/AI 경로는 무변경(어드민 입력 UX만 통합).
 - **검증 중 프롬프트 보정:** 초기 룰이 "16명 (선착순)"을 라벨 "선착순"으로 처리(숫자 16 유실 → 정렬·예약상한 손실)하는 퇴행 발견. 룰을 "인원 숫자가 하나라도 있으면 capacity=그 수, 숫자 전혀 없을 때만 capacityLabel"로 강화. 재검증: 회귀(16명→capacity 16, 라벨 null) OK, 핵심(정원 미기재 → 스킵 안 되고 "2인 출발 가능" 라벨) OK. build 통과, db push(비파괴) 완료.

@@ -52,8 +52,9 @@ export default async function EditProductPage({
             departureLabel: product.departureLabel ?? "",
             nights: product.nights,
             price: product.price,
-            capacity: product.capacity,
-            capacityLabel: product.capacityLabel ?? "",
+            capacity:
+              product.capacityLabel ??
+              (product.capacity > 0 ? String(product.capacity) : ""),
             deadline: toDateInput(product.deadline),
             included: product.included.join("\n"),
             excluded: product.excluded.join("\n"),

@@ -9,10 +9,9 @@ export type ProductFormInitial = {
   golfCourse: string;
   departureDate: string;
   departureLabel: string;
-  capacityLabel: string;
   nights: number | "";
   price: number | "";
-  capacity: number | "";
+  capacity: string;
   deadline: string;
   included: string;
   excluded: string;
@@ -25,7 +24,6 @@ export const EMPTY_PRODUCT_FORM: ProductFormInitial = {
   golfCourse: "",
   departureDate: "",
   departureLabel: "",
-  capacityLabel: "",
   nights: "",
   price: "",
   capacity: "",
@@ -66,10 +64,9 @@ export default function ProductForm(props: Props) {
       golfCourse: form.golfCourse.trim() || null,
       departureDate: form.departureDate,
       departureLabel: form.departureLabel.trim() || null,
-      capacityLabel: form.capacityLabel.trim() || null,
       nights: form.nights === "" ? null : Number(form.nights),
       price: form.price === "" ? null : Number(form.price),
-      capacity: form.capacity === "" ? null : Number(form.capacity),
+      capacity: form.capacity.trim() || null,
       deadline: form.deadline || null,
       included: splitLines(form.included),
       excluded: splitLines(form.excluded),
@@ -217,27 +214,13 @@ export default function ProductForm(props: Props) {
           />
         </Field>
 
-        <Field label="정원 (명)" htmlFor="capacity">
+        <Field label="정원" htmlFor="capacity">
           <input
             id="capacity"
-            type="number"
-            min={1}
-            value={form.capacity}
-            onChange={(e) =>
-              update("capacity", e.target.value === "" ? "" : Number(e.target.value))
-            }
-            placeholder="16 (미상이면 비움)"
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="모집인원 표기 (선택)" htmlFor="capacityLabel">
-          <input
-            id="capacityLabel"
             type="text"
-            value={form.capacityLabel}
-            onChange={(e) => update("capacityLabel", e.target.value)}
-            placeholder="예: 선착순 / 소수정예 (비우면 정원 또는 '인원 문의')"
+            value={form.capacity}
+            onChange={(e) => update("capacity", e.target.value)}
+            placeholder="숫자만(예: 16) 또는 텍스트(예: 선착순, 2인 출발 가능)"
             className={inputClass}
           />
         </Field>
