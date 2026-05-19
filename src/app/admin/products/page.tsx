@@ -55,12 +55,20 @@ export default async function AdminProductsPage({
             등록된 상품 목록 ({products.length}건 / 전체 {totalCount}건)
           </p>
         </div>
-        <Link
-          href="/admin/products/new"
-          className="flex h-12 items-center rounded-xl bg-warm-500 px-5 text-base font-bold text-white transition-colors hover:bg-warm-600"
-        >
-          + 신규 등록
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/products/quick"
+            className="flex h-12 items-center rounded-xl bg-warm-500 px-5 text-base font-bold text-white transition-colors hover:bg-warm-600"
+          >
+            ⚡ 빠른 등록 (본문 붙여넣기)
+          </Link>
+          <Link
+            href="/admin/products/new"
+            className="flex h-12 items-center rounded-xl border-2 border-warm-300 px-5 text-base font-bold text-warm-700 transition-colors hover:bg-warm-50"
+          >
+            + 신규 등록
+          </Link>
+        </div>
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
