@@ -109,7 +109,9 @@ export default async function AdminProductsPage({
                   <td className="px-4 py-3 font-bold text-warm-600 whitespace-nowrap">
                     {formatPrice(p.price)}원
                   </td>
-                  <td className="px-4 py-3 text-neutral-700">{p.capacity}명</td>
+                  <td className="px-4 py-3 text-neutral-700">
+                    {p.capacityLabel ?? (p.capacity > 0 ? `${p.capacity}명` : "—")}
+                  </td>
                   <td className="px-4 py-3">
                     {p.autoImported ? (
                       <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">

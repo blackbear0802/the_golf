@@ -17,4 +17,12 @@
 - 스키마+파서+크롤러+표시 12파일+어드민폼+스크립트 반영. `db push` 운영 적용(비파괴), `npm run build` 통과.
 - **회귀 OK:** sample-post.txt(단일 날짜) → departureLabel=null, departureDate 2026-12-08 유지(변화 없음).
 - **범위 OK:** 중국 염성 원본("7월~8월", 연도 없음) → departureLabel="7월~8월", departureDate=2026-07-01(연도 버그도 동시 해결, 과거 아님). 라이브 상품 생성·노출 확인.
-- **별개 발견(미수정, 보고만):** `normalize`의 `capacity < 1 → null` 가드 때문에 모집인원 미기재 글("2인 출발 가능"만 있는 등)은 통째로 스킵됨. 날짜 문제와 동일 부류(필수값 엄격 → 느슨한 글 유실). 검증 시 정원 미기재가 변수라 테스트 픽스처에 모집인원 명시해 departureLabel 경로만 격리 검증함. 향후 capacity 0 허용 여부는 별도 결정 필요.
+- **별개 발견:** `normalize`의 `capacity < 1 → null` 가드 때문에 모집인원 미기재 글은 통째로 스킵됨. 날짜 문제와 동일 부류. → 사용자 지시로 "같은 방식" 해결 진행.
+
+## 2026-05-19 (capacityLabel — 날짜와 동일 방식)
+
+- departureLabel과 대칭으로 `capacityLabel String?` 추가. capacity는 정렬/필터/예약용 내부값 유지(미기재 시 0).
+- **날짜와 다른 핵심:** capacity는 표시뿐 아니라 **예약 로직**에 쓰임 — `BookingForm` max 인원, `api/bookings` 정원초과 검증. capacity=0을 방치하면 "최대 0명"으로 예약 불가가 됨. 이 사이트 예약은 문의형(상담원 24h 내 연락, 좌석 락 아님)이므로 **capacity<=0 = 상한 없음(상담 시 확정)**으로 처리. BookingForm·api/bookings에서 capacity>0일 때만 상한 적용. (날짜 작업엔 없던 추가 범위 — 정확성상 필수.)
+- 표시 폴백: `capacityLabel ?? (capacity>0 ? '최대 N명' : '인원 문의')`.
+- 어드민: capacity 필수 해제(미상 허용) + capacityLabel 입력. 의도(미상 허용)와 일관되게 date(어드민 필수 유지)와 달리 capacity는 어드민도 선택화.
+- **검증 중 프롬프트 보정:** 초기 룰이 "16명 (선착순)"을 라벨 "선착순"으로 처리(숫자 16 유실 → 정렬·예약상한 손실)하는 퇴행 발견. 룰을 "인원 숫자가 하나라도 있으면 capacity=그 수, 숫자 전혀 없을 때만 capacityLabel"로 강화. 재검증: 회귀(16명→capacity 16, 라벨 null) OK, 핵심(정원 미기재 → 스킵 안 되고 "2인 출발 가능" 라벨) OK. build 통과, db push(비파괴) 완료.

@@ -24,7 +24,8 @@ export async function POST(req: Request) {
   if (!product) {
     return NextResponse.json({ error: "존재하지 않는 상품입니다." }, { status: 404 });
   }
-  if (count > product.capacity) {
+  // capacity 미기재(0) 상품은 문의형이라 상한 검증 안 함(상담 시 확정)
+  if (product.capacity > 0 && count > product.capacity) {
     return NextResponse.json(
       { error: `최대 ${product.capacity}명까지 신청 가능합니다.` },
       { status: 400 }

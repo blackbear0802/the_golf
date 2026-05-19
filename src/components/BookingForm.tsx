@@ -14,6 +14,8 @@ export default function BookingForm({
   user: { name: string; email: string; phone: string };
 }) {
   const router = useRouter();
+  // 모집인원 미기재(0) 상품은 문의형이라 상한을 두지 않음(상담 시 확정)
+  const maxHeadcount = capacity > 0 ? capacity : 99;
   const [headcount, setHeadcount] = useState(2);
   const [additionalRequest, setAdditionalRequest] = useState("");
   const [error, setError] = useState("");
@@ -61,7 +63,7 @@ export default function BookingForm({
 
       <div>
         <label htmlFor="headcount" className="block text-base font-bold text-neutral-800">
-          인원 (최대 {capacity}명)
+          인원 {capacity > 0 ? `(최대 ${capacity}명)` : "(상담 시 확정)"}
         </label>
         <div className="mt-2 flex items-center gap-3">
           <button
@@ -75,17 +77,17 @@ export default function BookingForm({
             id="headcount"
             type="number"
             min={1}
-            max={capacity}
+            max={maxHeadcount}
             value={headcount}
             onChange={(e) => {
-              const n = Math.min(capacity, Math.max(1, Number(e.target.value) || 1));
+              const n = Math.min(maxHeadcount, Math.max(1, Number(e.target.value) || 1));
               setHeadcount(n);
             }}
             className="h-16 flex-1 rounded-xl border-2 border-neutral-200 bg-white px-4 text-center text-2xl font-black text-neutral-900 focus:border-warm-500 focus:outline-none"
           />
           <button
             type="button"
-            onClick={() => setHeadcount((n) => Math.min(capacity, n + 1))}
+            onClick={() => setHeadcount((n) => Math.min(maxHeadcount, n + 1))}
             className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-neutral-200 bg-white text-2xl font-black text-neutral-700 transition-colors hover:bg-neutral-50"
           >
             +

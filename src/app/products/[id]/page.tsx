@@ -166,7 +166,13 @@ export default async function ProductDetailPage({
                 value={product.departureLabel ?? formatDate(product.departureDate)}
               />
               <InfoCell label="기간" value={`${product.nights}박`} />
-              <InfoCell label="모집 인원" value={`최대 ${product.capacity}명`} />
+              <InfoCell
+                label="모집 인원"
+                value={
+                  product.capacityLabel ??
+                  (product.capacity > 0 ? `최대 ${product.capacity}명` : "인원 문의")
+                }
+              />
               <InfoCell
                 label="가격 (1인)"
                 value={`${formatPrice(product.price)}원`}

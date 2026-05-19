@@ -69,6 +69,7 @@ model Product {
   included      String[]
   excluded      String[]
   capacity      Int
+  capacityLabel String? @map("capacity_label")
   deadline      DateTime? @db.Date
   sourceUrl     String?  @map("source_url")
   rawText       String?  @map("raw_text") @db.Text

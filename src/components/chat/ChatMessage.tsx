@@ -45,6 +45,7 @@ export default function ChatMessage({ message }: { message: Message }) {
                 nights: p.nights,
                 price: p.price,
                 capacity: p.capacity,
+                capacityLabel: p.capacityLabel,
                 coverImage: p.coverImage,
               }}
             />

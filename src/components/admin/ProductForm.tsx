@@ -9,6 +9,7 @@ export type ProductFormInitial = {
   golfCourse: string;
   departureDate: string;
   departureLabel: string;
+  capacityLabel: string;
   nights: number | "";
   price: number | "";
   capacity: number | "";
@@ -24,6 +25,7 @@ export const EMPTY_PRODUCT_FORM: ProductFormInitial = {
   golfCourse: "",
   departureDate: "",
   departureLabel: "",
+  capacityLabel: "",
   nights: "",
   price: "",
   capacity: "",
@@ -64,6 +66,7 @@ export default function ProductForm(props: Props) {
       golfCourse: form.golfCourse.trim() || null,
       departureDate: form.departureDate,
       departureLabel: form.departureLabel.trim() || null,
+      capacityLabel: form.capacityLabel.trim() || null,
       nights: form.nights === "" ? null : Number(form.nights),
       price: form.price === "" ? null : Number(form.price),
       capacity: form.capacity === "" ? null : Number(form.capacity),
@@ -214,7 +217,7 @@ export default function ProductForm(props: Props) {
           />
         </Field>
 
-        <Field label="정원 (명) *" htmlFor="capacity">
+        <Field label="정원 (명)" htmlFor="capacity">
           <input
             id="capacity"
             type="number"
@@ -223,9 +226,19 @@ export default function ProductForm(props: Props) {
             onChange={(e) =>
               update("capacity", e.target.value === "" ? "" : Number(e.target.value))
             }
-            placeholder="16"
+            placeholder="16 (미상이면 비움)"
             className={inputClass}
-            required
+          />
+        </Field>
+
+        <Field label="모집인원 표기 (선택)" htmlFor="capacityLabel">
+          <input
+            id="capacityLabel"
+            type="text"
+            value={form.capacityLabel}
+            onChange={(e) => update("capacityLabel", e.target.value)}
+            placeholder="예: 선착순 / 소수정예 (비우면 정원 또는 '인원 문의')"
+            className={inputClass}
           />
         </Field>
 

@@ -53,6 +53,7 @@ export default async function EditProductPage({
             nights: product.nights,
             price: product.price,
             capacity: product.capacity,
+            capacityLabel: product.capacityLabel ?? "",
             deadline: toDateInput(product.deadline),
             included: product.included.join("\n"),
             excluded: product.excluded.join("\n"),

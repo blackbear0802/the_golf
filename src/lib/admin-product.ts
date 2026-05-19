@@ -8,6 +8,7 @@ export type ProductInput = {
   nights?: unknown;
   price?: unknown;
   capacity?: unknown;
+  capacityLabel?: unknown;
   deadline?: unknown;
   included?: unknown;
   excluded?: unknown;
@@ -23,6 +24,7 @@ export type ParsedProduct = {
   nights: number;
   price: number;
   capacity: number;
+  capacityLabel: string | null;
   deadline: Date | null;
   included: string[];
   excluded: string[];
@@ -75,8 +77,9 @@ export function parseProductInput(
   const price = parseIntStrict(input.price);
   if (price === null || price < 0) return { error: "가격은 0 이상의 숫자여야 합니다." };
 
-  const capacity = parseIntStrict(input.capacity);
-  if (capacity === null || capacity < 1) return { error: "정원은 1 이상의 숫자여야 합니다." };
+  // 정원 미기재 허용(0=미상). 표시는 capacityLabel 또는 "인원 문의"로 폴백
+  const capacityRaw = parseIntStrict(input.capacity);
+  const capacity = capacityRaw !== null && capacityRaw > 0 ? capacityRaw : 0;
 
   const deadlineRaw = input.deadline;
   let deadline: Date | null = null;
@@ -94,6 +97,7 @@ export function parseProductInput(
       nights,
       price,
       capacity,
+      capacityLabel: trimOrNull(input.capacityLabel),
       deadline,
       included: parseStringArray(input.included),
       excluded: parseStringArray(input.excluded),

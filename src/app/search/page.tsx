@@ -142,6 +142,7 @@ export default async function SearchPage({
                     nights: product.nights,
                     price: product.price,
                     capacity: product.capacity,
+                    capacityLabel: product.capacityLabel,
                     coverImage: product.media[0]?.url ?? null,
                   }}
                 />

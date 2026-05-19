@@ -71,7 +71,9 @@ async function main() {
   console.log(`  일정표기 : ${parsed.departureLabel ?? "(단일 날짜 — 라벨 없음)"}`);
   console.log(`  박       : ${parsed.nights}`);
   console.log(`  가격     : ${parsed.price.toLocaleString()}원`);
-  console.log(`  정원     : ${parsed.capacity}`);
+  console.log(
+    `  정원     : ${parsed.capacityLabel ?? (parsed.capacity > 0 ? parsed.capacity : "(미기재)")}`
+  );
   console.log(`  마감     : ${parsed.deadline ?? "-"}`);
   console.log(`  포함(${includedFinal.length}): ${includedFinal.join(" | ")}`);
   console.log(`  불포함(${excludedFinal.length}): ${excludedFinal.join(" | ")}`);
@@ -92,6 +94,7 @@ async function main() {
       nights: parsed.nights,
       price: parsed.price,
       capacity: parsed.capacity,
+      capacityLabel: parsed.capacityLabel,
       deadline: parsed.deadline
         ? new Date(`${parsed.deadline}T00:00:00.000Z`)
         : null,

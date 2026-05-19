@@ -13,6 +13,7 @@ export type RecommendedProduct = {
   nights: number;
   price: number;
   capacity: number;
+  capacityLabel: string | null;
   coverImage: string | null;
 };
 
@@ -110,6 +111,7 @@ export async function executeSearchProducts(
     nights: r.nights,
     price: r.price,
     capacity: r.capacity,
+    capacityLabel: r.capacityLabel,
     coverImage: r.media[0]?.url ?? null,
   }));
 }

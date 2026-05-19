@@ -150,6 +150,7 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
             nights: parsed.nights,
             price: parsed.price,
             capacity: parsed.capacity,
+            capacityLabel: parsed.capacityLabel,
             deadline: parsed.deadline
               ? new Date(`${parsed.deadline}T00:00:00.000Z`)
               : null,

@@ -29,6 +29,15 @@
 - [x] 생성/수정 API route 처리 확인·추가
 - [x] `admin/products/[id]/edit` 매핑
 
+## 7. capacityLabel (모집인원 — 날짜와 동일 방식)
+- [x] schema `capacityLabel String?` + db push
+- [x] 파서: 타입/프롬프트/normalize 가드 `capacity<1→null` 제거(nights만 유지)
+- [x] 크롤러/스크립트 capacityLabel 반영
+- [x] 표시: ProductCard/상품상세/검색/챗/어드민목록 → `capacityLabel ?? (capacity>0? '최대 N명' : '인원 문의')`
+- [x] 예약 보정: BookingForm max·api/bookings 정원검증 → capacity<=0이면 상한 없음(문의 확정)
+- [x] 어드민: ProductForm capacityLabel 입력 + capacity 선택화, admin-product.ts capacity 0 허용
+- [x] 검증: 정원 미기재 글 → 스킵 안 되고 라벨/문의 표시 + 예약 동작
+
 ## 6. 검증
 - [x] 기존 sample-post.txt 회귀(단일 날짜 → 라벨 null, 날짜 정상)
 - [x] 범위 케이스(중국 염성 "7월~8월") → label 세팅 + 근사일 비과거

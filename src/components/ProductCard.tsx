@@ -18,6 +18,7 @@ export type ProductCardData = {
   nights: number;
   price: number;
   capacity: number;
+  capacityLabel?: string | null;
   coverImage?: string | null;
 };
 
@@ -55,7 +56,10 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
           <span className="text-neutral-300">·</span>
           <span>{product.nights}박</span>
           <span className="text-neutral-300">·</span>
-          <span>최대 {product.capacity}명</span>
+          <span>
+            {product.capacityLabel ??
+              (product.capacity > 0 ? `최대 ${product.capacity}명` : "인원 문의")}
+          </span>
         </div>
         <p className="mt-3 text-2xl font-black text-warm-600">
           {formatPrice(product.price)}원
