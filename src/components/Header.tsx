@@ -12,11 +12,19 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-warm-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-5 md:px-8">
-        <Link href="/" className="flex items-baseline">
-          <span className="text-2xl md:text-3xl font-black tracking-tight text-warm-600">
-            The Golf
-          </span>
-        </Link>
+        <div className="flex items-center gap-3 md:gap-7">
+          <Link href="/" className="flex items-baseline">
+            <span className="text-2xl md:text-3xl font-black tracking-tight text-warm-600">
+              The Golf
+            </span>
+          </Link>
+          <Link
+            href="/packages"
+            className="flex h-10 md:h-12 items-center rounded-xl px-2 md:px-3 text-sm md:text-lg font-bold text-neutral-700 transition-colors hover:bg-warm-50 hover:text-warm-600"
+          >
+            전체상품
+          </Link>
+        </div>
 
         <nav className="flex items-center gap-2 md:gap-3">
           {isLoading ? (

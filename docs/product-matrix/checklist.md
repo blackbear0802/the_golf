@@ -50,4 +50,4 @@
 ## 7. 마무리
 - [x] context-notes 결정·근거 기록
 - [x] 메모리 갱신(project-product-matrix·project-progress·project-band-crawl·MEMORY.md 인덱스)
-- [ ] (후속) `/packages` 진입 동선(Header/홈) 노출 위치 결정 — 계획 범위 밖, 사용자 확인
+- [x] `/packages` 진입 동선 — 사용자 결정대로 Header 좌측(로고 옆)에 '전체상품' 링크 추가
