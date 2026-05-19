@@ -61,6 +61,8 @@ model User {
 model Product {
   id            String   @id @default(cuid())
   destination   String
+  countryCode   String?  @map("country_code")
+  regionCode    String?  @map("region_code")
   golfCourse    String?  @map("golf_course")
   departureDate DateTime @map("departure_date") @db.Date
   departureLabel String? @map("departure_label")
@@ -82,6 +84,7 @@ model Product {
   media    ProductMedia[]
 
   @@index([destination, departureDate, capacity, nights])
+  @@index([countryCode, regionCode, departureDate])
   @@map("products")
 }
 

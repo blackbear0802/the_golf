@@ -15,14 +15,14 @@
 - [x] 국가/지역 코드 체계 확정(ISO alpha-2 + region slug) → 큐레이션 사전 context-notes에 확정(§3에서 `regions.ts`로 전사)
 
 ## 2. 스키마 / 백필
-- [ ] `prisma/schema.prisma`: `Product.countryCode String?`, `regionCode String?`
-- [ ] 인덱스 `@@index([countryCode, regionCode, departureDate])`
-- [ ] 마이그레이션 생성·적용(Neon)
-- [ ] 기존 행 백필 스크립트(destination→코드, 미매핑은 null 유지)
-- [ ] 백필 결과 검증(매핑률·null 잔존 목록 출력)
+- [x] `prisma/schema.prisma`: `Product.countryCode String?`, `regionCode String?`
+- [x] 인덱스 `@@index([countryCode, regionCode, departureDate])`
+- [x] 마이그레이션 생성·적용(Neon) → `prisma db push` 성공, client 재생성
+- [x] 기존 행 백필 스크립트 `scripts/backfill-region-codes.ts`(멱등)
+- [x] 백필 결과 검증 → 11건 전량 매핑, 미매핑 0건 (yancheng 5·나머지 6지역 각 1)
 
 ## 3. 상수 / 파서
-- [ ] `src/lib/regions.ts` — country/region 라벨·정렬순서·destination 큐레이션 맵 + 헤더 코멘트
+- [x] `src/lib/regions.ts` — country/region 라벨·정렬순서·destination 큐레이션 맵 + 헤더 코멘트 (§2 백필이 import하므로 선행 생성)
 - [ ] 밴드 파서 경로에서 destination→`countryCode`/`regionCode` 채움(기존 destination 무변경, 추가만)
 - [ ] 매핑 실패 시 null + 경고 로깅(상품 생성은 막지 않음)
 

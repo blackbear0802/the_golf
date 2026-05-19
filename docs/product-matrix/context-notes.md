@@ -53,3 +53,13 @@
 - **사전 키 전략:** raw destination 문자열 **정확 일치** 키. 신규 크롤 글에 사전에 없는 destination 등장 시 → countryCode/regionCode null + 경고(매트릭스 비노출, 목록엔 destination으로 노출 — degrade 허용, 계획 리스크 항목과 일치). 사전은 운영하며 증분 보강.
 - **현 데이터로 채워질 매트릭스:** 지역 7행(치앙마이·다낭·후쿠오카·도쿄·세부·코타키나발루·염성) × 월 2칸(2026-06, 2026-07). 6월=치앙마이·다낭·도쿄 각 1, 7월=후쿠오카·세부·코타키나발루·염성(3)·... = 합계 10. 매트릭스↔목록 일치 검증 기준값.
 - checklist §1 완료. 다음은 §2 스키마/백필(코드·Neon 마이그레이션) — DB 변경 단계라 착수 전 사용자 확인.
+
+## 2026-05-19 (§2 스키마/백필 — 완료)
+
+- **사용자 승인:** "전체 진행" — schema 변경 + 운영 Neon `prisma db push` + 백필까지 일괄. 가산적 nullable 2컬럼이라 데이터 손실 없음.
+- **스키마:** `Product.countryCode String? @map("country_code")`, `regionCode String? @map("region_code")` + `@@index([countryCode, regionCode, departureDate])`. 기존 `@map` snake_case 컨벤션 준수.
+- **마이그레이션 방식:** 이 프로젝트는 migrations 히스토리 없이 `prisma db push`(schema-first). push 성공 후 `prisma generate`로 client 재생성(generated/prisma).
+- **regions.ts 선행 생성(§3→§2 당김):** 백필이 큐레이션 사전을 필요로 함. 사전을 스크립트에 중복하지 않으려 단일 출처 `src/lib/regions.ts`를 §2에서 먼저 생성. `REGION_META`(regionCode→국가/지역명·displayOrder), `mapDestination()`(trim 후 정확 일치, 미매핑 null), `orderedRegionCodes()`. §3 남은 일은 밴드 파서 연결뿐.
+- **백필:** `scripts/backfill-region-codes.ts`(멱등 — 이미 일치하면 스킵). investigate 스크립트와 동일한 PrismaPg+dotenv 패턴.
+- **백필 결과(검증 기준값 갱신):** 조사 시점 10건 → 현재 **11건**(중국 yancheng가 4→5, 신규 1건 유입). **전량 매핑, 미매핑 0**. regionCode 분포: yancheng 5, chiangmai/danang/fukuoka/tokyo/cebu/kotakinabalu 각 1. §1 노트의 "합계 10" 기준값은 **11로 갱신**(매트릭스↔목록 일치 검증 시 이 값 사용, 월 분해는 §4에서 재확인).
+- 다음은 §4 매트릭스 페이지(`/packages`, 서버 컴포넌트 groupBy+ISR) + §5 `/search` 확장. DB 변경 없음.
