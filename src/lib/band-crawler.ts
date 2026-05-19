@@ -146,6 +146,7 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
             destination: parsed.destination,
             golfCourse: parsed.golfCourse,
             departureDate: new Date(`${parsed.departureDate}T00:00:00.000Z`),
+            departureLabel: parsed.departureLabel,
             nights: parsed.nights,
             price: parsed.price,
             capacity: parsed.capacity,

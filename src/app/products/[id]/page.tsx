@@ -20,6 +20,7 @@ export async function generateMetadata({
       nights: true,
       price: true,
       departureDate: true,
+      departureLabel: true,
     },
   });
   if (!product) {
@@ -28,9 +29,11 @@ export async function generateMetadata({
 
   const priceText = new Intl.NumberFormat("ko-KR").format(product.price);
   const dep = product.departureDate;
-  const dateText = `${dep.getFullYear()}.${String(dep.getMonth() + 1).padStart(2, "0")}.${String(
-    dep.getDate()
-  ).padStart(2, "0")} 출발`;
+  const dateText = product.departureLabel
+    ? `${product.departureLabel} 출발`
+    : `${dep.getFullYear()}.${String(dep.getMonth() + 1).padStart(2, "0")}.${String(
+        dep.getDate()
+      ).padStart(2, "0")} 출발`;
   const title = `${product.destination} ${product.nights}박 ${product.golfCourse}`;
   const description = `${dateText} · 1인 ${priceText}원. ${product.destination} 골프 투어 — 항공·숙박·라운딩 포함. 더 골프에서 안전하게 예약하세요.`;
 
@@ -158,7 +161,10 @@ export default async function ProductDetailPage({
             )}
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-              <InfoCell label="출발일" value={formatDate(product.departureDate)} />
+              <InfoCell
+                label="출발일"
+                value={product.departureLabel ?? formatDate(product.departureDate)}
+              />
               <InfoCell label="기간" value={`${product.nights}박`} />
               <InfoCell label="모집 인원" value={`최대 ${product.capacity}명`} />
               <InfoCell

@@ -14,6 +14,7 @@ export type ProductCardData = {
   destination: string;
   golfCourse: string | null;
   departureDate: Date;
+  departureLabel?: string | null;
   nights: number;
   price: number;
   capacity: number;
@@ -50,7 +51,7 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
           </p>
         )}
         <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-base text-neutral-700">
-          <span>{formatDate(product.departureDate)} 출발</span>
+          <span>{product.departureLabel ?? formatDate(product.departureDate)} 출발</span>
           <span className="text-neutral-300">·</span>
           <span>{product.nights}박</span>
           <span className="text-neutral-300">·</span>

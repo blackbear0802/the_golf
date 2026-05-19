@@ -109,7 +109,7 @@ export default async function MyPage() {
               }
               sub={
                 upcomingTour?.product
-                  ? `${upcomingTour.product.destination} · ${formatDate(upcomingTour.product.departureDate)}`
+                  ? `${upcomingTour.product.destination} · ${upcomingTour.product.departureLabel ?? formatDate(upcomingTour.product.departureDate)}`
                   : undefined
               }
             />
@@ -186,7 +186,10 @@ export default async function MyPage() {
                     <div className="mt-4 grid gap-3 text-base text-neutral-700 sm:grid-cols-2">
                       {booking.product && (
                         <>
-                          <Row label="출발일" value={formatDate(booking.product.departureDate)} />
+                          <Row
+                            label="출발일"
+                            value={booking.product.departureLabel ?? formatDate(booking.product.departureDate)}
+                          />
                           <Row label="기간" value={`${booking.product.nights}박`} />
                         </>
                       )}

@@ -9,6 +9,7 @@ export type RecommendedProduct = {
   destination: string;
   golfCourse: string | null;
   departureDate: string; // ISO
+  departureLabel: string | null;
   nights: number;
   price: number;
   capacity: number;
@@ -105,6 +106,7 @@ export async function executeSearchProducts(
     destination: r.destination,
     golfCourse: r.golfCourse,
     departureDate: r.departureDate.toISOString(),
+    departureLabel: r.departureLabel,
     nights: r.nights,
     price: r.price,
     capacity: r.capacity,

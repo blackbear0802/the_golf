@@ -63,6 +63,7 @@ model Product {
   destination   String
   golfCourse    String?  @map("golf_course")
   departureDate DateTime @map("departure_date") @db.Date
+  departureLabel String? @map("departure_label")
   nights        Int
   price         Int
   included      String[]

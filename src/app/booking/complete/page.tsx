@@ -73,7 +73,10 @@ export default async function BookingCompletePage({
                     {booking.product.golfCourse && (
                       <Row label="골프장" value={booking.product.golfCourse} />
                     )}
-                    <Row label="출발일" value={formatDate(booking.product.departureDate)} />
+                    <Row
+                      label="출발일"
+                      value={booking.product.departureLabel ?? formatDate(booking.product.departureDate)}
+                    />
                     <Row label="기간" value={`${booking.product.nights}박`} />
                   </>
                 )}

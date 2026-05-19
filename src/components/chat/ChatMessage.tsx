@@ -41,6 +41,7 @@ export default function ChatMessage({ message }: { message: Message }) {
                 destination: p.destination,
                 golfCourse: p.golfCourse,
                 departureDate: new Date(p.departureDate),
+                departureLabel: p.departureLabel,
                 nights: p.nights,
                 price: p.price,
                 capacity: p.capacity,

@@ -21,6 +21,7 @@ export default async function Image({
       nights: true,
       price: true,
       departureDate: true,
+      departureLabel: true,
     },
   });
 
@@ -31,7 +32,9 @@ export default async function Image({
     ? `${new Intl.NumberFormat("ko-KR").format(product.price)}원`
     : "";
   const dep = product?.departureDate;
-  const dateText = dep
+  const dateText = product?.departureLabel
+    ? `${product.departureLabel} 출발`
+    : dep
     ? `${dep.getFullYear()}.${String(dep.getMonth() + 1).padStart(2, "0")}.${String(
         dep.getDate()
       ).padStart(2, "0")} 출발`

@@ -75,7 +75,7 @@ export default async function BookingPage({
                 <p className="text-base text-neutral-700">{product.golfCourse}</p>
               )}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-base text-neutral-700">
-                <span>출발일 {formatDate(product.departureDate)}</span>
+                <span>출발일 {product.departureLabel ?? formatDate(product.departureDate)}</span>
                 <span>·</span>
                 <span>{product.nights}박</span>
                 <span>·</span>

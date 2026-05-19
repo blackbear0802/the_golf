@@ -103,7 +103,7 @@ export default async function AdminProductsPage({
                   </td>
                   <td className="px-4 py-3 text-neutral-700">{p.golfCourse ?? "-"}</td>
                   <td className="px-4 py-3 text-neutral-700 whitespace-nowrap">
-                    {formatDate(p.departureDate)}
+                    {p.departureLabel ?? formatDate(p.departureDate)}
                   </td>
                   <td className="px-4 py-3 text-neutral-700">{p.nights}박</td>
                   <td className="px-4 py-3 font-bold text-warm-600 whitespace-nowrap">

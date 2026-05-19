@@ -8,6 +8,7 @@ export type ProductFormInitial = {
   destination: string;
   golfCourse: string;
   departureDate: string;
+  departureLabel: string;
   nights: number | "";
   price: number | "";
   capacity: number | "";
@@ -22,6 +23,7 @@ export const EMPTY_PRODUCT_FORM: ProductFormInitial = {
   destination: "",
   golfCourse: "",
   departureDate: "",
+  departureLabel: "",
   nights: "",
   price: "",
   capacity: "",
@@ -61,6 +63,7 @@ export default function ProductForm(props: Props) {
       destination: form.destination.trim(),
       golfCourse: form.golfCourse.trim() || null,
       departureDate: form.departureDate,
+      departureLabel: form.departureLabel.trim() || null,
       nights: form.nights === "" ? null : Number(form.nights),
       price: form.price === "" ? null : Number(form.price),
       capacity: form.capacity === "" ? null : Number(form.capacity),
@@ -156,6 +159,17 @@ export default function ProductForm(props: Props) {
             onChange={(e) => update("departureDate", e.target.value)}
             className={inputClass}
             required
+          />
+        </Field>
+
+        <Field label="출발 일정 표기 (선택)" htmlFor="departureLabel">
+          <input
+            id="departureLabel"
+            type="text"
+            value={form.departureLabel}
+            onChange={(e) => update("departureLabel", e.target.value)}
+            placeholder="예: 2026년 7월~8월 (비우면 출발일이 그대로 표시)"
+            className={inputClass}
           />
         </Field>
 

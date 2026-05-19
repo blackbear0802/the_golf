@@ -67,7 +67,8 @@ async function main() {
   console.log("\n[3] 파싱 결과");
   console.log(`  목적지   : ${parsed.destination}`);
   console.log(`  골프장   : ${parsed.golfCourse ?? "-"}`);
-  console.log(`  출발일   : ${parsed.departureDate}`);
+  console.log(`  출발일   : ${parsed.departureDate}${parsed.departureLabel ? " (내부 정렬키)" : ""}`);
+  console.log(`  일정표기 : ${parsed.departureLabel ?? "(단일 날짜 — 라벨 없음)"}`);
   console.log(`  박       : ${parsed.nights}`);
   console.log(`  가격     : ${parsed.price.toLocaleString()}원`);
   console.log(`  정원     : ${parsed.capacity}`);
@@ -87,6 +88,7 @@ async function main() {
       destination: parsed.destination,
       golfCourse: parsed.golfCourse,
       departureDate: new Date(`${parsed.departureDate}T00:00:00.000Z`),
+      departureLabel: parsed.departureLabel,
       nights: parsed.nights,
       price: parsed.price,
       capacity: parsed.capacity,

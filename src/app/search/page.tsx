@@ -138,6 +138,7 @@ export default async function SearchPage({
                     destination: product.destination,
                     golfCourse: product.golfCourse,
                     departureDate: product.departureDate,
+                    departureLabel: product.departureLabel,
                     nights: product.nights,
                     price: product.price,
                     capacity: product.capacity,

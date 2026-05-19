@@ -4,6 +4,7 @@ export type ProductInput = {
   destination?: unknown;
   golfCourse?: unknown;
   departureDate?: unknown;
+  departureLabel?: unknown;
   nights?: unknown;
   price?: unknown;
   capacity?: unknown;
@@ -18,6 +19,7 @@ export type ParsedProduct = {
   destination: string;
   golfCourse: string | null;
   departureDate: Date;
+  departureLabel: string | null;
   nights: number;
   price: number;
   capacity: number;
@@ -88,6 +90,7 @@ export function parseProductInput(
       destination,
       golfCourse: trimOrNull(input.golfCourse),
       departureDate,
+      departureLabel: trimOrNull(input.departureLabel),
       nights,
       price,
       capacity,

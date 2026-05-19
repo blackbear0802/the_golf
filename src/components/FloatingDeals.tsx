@@ -36,7 +36,7 @@ export default async function FloatingDeals() {
                 </p>
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-sm text-neutral-500">
-                    {formatDate(p.departureDate)} · {p.nights}박
+                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박
                   </span>
                   <span className="text-lg font-black text-warm-600">
                     {formatPrice(p.price)}원
@@ -67,7 +67,7 @@ export default async function FloatingDeals() {
                 </p>
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-xs text-neutral-500">
-                    {formatDate(p.departureDate)} · {p.nights}박
+                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박
                   </span>
                   <span className="text-base font-black text-warm-600">
                     {formatPrice(p.price)}원

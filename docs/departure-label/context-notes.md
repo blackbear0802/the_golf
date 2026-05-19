@@ -11,3 +11,10 @@
 - **운영 DB 직접 변경:** migrations 폴더 없음 → `prisma db push`만 사용. nullable 컬럼 추가는 비파괴(기존행 NULL→폴백)지만 prod 대상이라 push는 사용자 승인/실행로 진행.
 - **기존 라이브 테스트 상품 2건**(`cmpauqbmw...`, `cmpauqfht...`): 이번 작업 후 원하면 중국건을 "2026년 7월~8월" 라벨로 보정 가능 — 별건으로 둠.
 - **회귀 가드:** 파서 프롬프트 변경 위험 → 기존 `scripts/sample-post.txt`(정확 단일 날짜) 결과가 departureLabel=null·기존 날짜 그대로인지 반드시 재확인.
+
+## 2026-05-19 (구현·검증 완료)
+
+- 스키마+파서+크롤러+표시 12파일+어드민폼+스크립트 반영. `db push` 운영 적용(비파괴), `npm run build` 통과.
+- **회귀 OK:** sample-post.txt(단일 날짜) → departureLabel=null, departureDate 2026-12-08 유지(변화 없음).
+- **범위 OK:** 중국 염성 원본("7월~8월", 연도 없음) → departureLabel="7월~8월", departureDate=2026-07-01(연도 버그도 동시 해결, 과거 아님). 라이브 상품 생성·노출 확인.
+- **별개 발견(미수정, 보고만):** `normalize`의 `capacity < 1 → null` 가드 때문에 모집인원 미기재 글("2인 출발 가능"만 있는 등)은 통째로 스킵됨. 날짜 문제와 동일 부류(필수값 엄격 → 느슨한 글 유실). 검증 시 정원 미기재가 변수라 테스트 픽스처에 모집인원 명시해 departureLabel 경로만 격리 검증함. 향후 capacity 0 허용 여부는 별도 결정 필요.

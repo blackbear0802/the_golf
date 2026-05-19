@@ -20,7 +20,14 @@ export default async function AdminBookingsPage() {
   const bookings = await prisma.booking.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      product: { select: { destination: true, golfCourse: true, departureDate: true } },
+      product: {
+        select: {
+          destination: true,
+          golfCourse: true,
+          departureDate: true,
+          departureLabel: true,
+        },
+      },
       user: { select: { name: true, phone: true, email: true } },
     },
   });
@@ -80,7 +87,7 @@ export default async function AdminBookingsPage() {
                     )}
                     {b.product?.departureDate && (
                       <div className="text-xs text-neutral-500">
-                        출발 {formatDate(b.product.departureDate)}
+                        출발 {b.product.departureLabel ?? formatDate(b.product.departureDate)}
                       </div>
                     )}
                   </td>
