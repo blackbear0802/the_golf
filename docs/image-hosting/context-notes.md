@@ -14,3 +14,6 @@
 - `@vercel/blob ^2.4.0` 설치, `storeFromUrl` 구현(fetch→put public, 실패/토큰없음 시 원본 URL 폴백), `.env.example` 항목 추가. `npm run build` 통과.
 - **블로커(계측으로 확정):** 사용자가 만든 Blob 스토어가 **private**. `put(access:"public")`가 "Cannot use public access on a private store"로 거부됨. 토큰·fetch·업로드 코드는 정상(진단 시 fetch 200·5309B까지 정상, put에서만 실패).
 - **해결:** 상품 이미지는 브라우저가 `<img src>`로 직접 받는 공개 이미지라 **public 스토어** 필수(private은 함수 프록시+전송비↑로 부적합). Vercel Blob 스토어 access는 생성 시 결정이라 보통 사후 변경 불가 → **public 스토어 새로 생성→프로젝트 연결→새 BLOB_READ_WRITE_TOKEN을 .env/Vercel에 반영**. 코드는 그대로(`access:"public"` 정답), 폴백 덕에 그 전까지 배포·크롤 무해.
+- **검증 완료:** public 스토어 토큰으로 재검증 → `storeFromUrl`이 `https://<id>.public.blob.vercel-storage.com/products/...jpg` 반환, 그 URL HTTP 200·image/jpeg·바이트 일치. 단위 레벨 정상.
+- **남은 e2e 갭(블로커 의존):** 진짜 대상(밴드 포스트 이미지 다수)은 `band-crawler` 경유이고 그건 BAND OAuth(1순위)가 풀려야 가동. test-parse-pipeline는 텍스트 전용이라 이미지 경로 미경유. 따라서 storeFromUrl 단위 검증까지가 현 단계 한계 — band-crawler→productMedia 배선은 기존 검증된 코드라 무변경.
+- **사용자 확인 필요:** 옛 private 스토어 연결 잔존 시 Vercel Production env가 옛 토큰일 수 있음 → private 스토어 삭제 + Production `BLOB_READ_WRITE_TOKEN`이 새 public 값인지 확인해야 배포 환경에서 실제 동작.
