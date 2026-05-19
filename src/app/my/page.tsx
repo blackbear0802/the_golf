@@ -13,6 +13,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CancelBookingButton from "@/components/CancelBookingButton";
 
 const STATUS_LABEL = {
   pending: "접수 대기",
@@ -210,13 +211,25 @@ export default async function MyPage() {
                       접수번호: {booking.id}
                     </p>
 
-                    {booking.product && (
-                      <Link
-                        href={`/products/${booking.product.id}`}
-                        className="mt-3 inline-flex h-12 items-center rounded-xl border-2 border-warm-300 px-4 text-base font-bold text-warm-700 transition-colors hover:bg-warm-50"
-                      >
-                        상품 다시 보기
-                      </Link>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      {booking.product && (
+                        <Link
+                          href={`/products/${booking.product.id}`}
+                          className="inline-flex h-12 items-center rounded-xl border-2 border-warm-300 px-4 text-base font-bold text-warm-700 transition-colors hover:bg-warm-50"
+                        >
+                          상품 다시 보기
+                        </Link>
+                      )}
+                      {(booking.status === "pending" ||
+                        booking.status === "contacted") && (
+                        <CancelBookingButton bookingId={booking.id} />
+                      )}
+                    </div>
+
+                    {booking.status === "confirmed" && (
+                      <p className="mt-3 text-sm text-neutral-500">
+                        확정된 예약의 취소는 1588-0000으로 전화 상담해주세요.
+                      </p>
                     )}
                   </li>
                 ))}
