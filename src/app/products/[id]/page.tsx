@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { stripContacts } from "@/lib/contact-replacer";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -121,11 +122,12 @@ export default async function ProductDetailPage({
   });
   if (!product) notFound();
 
-  const golfImages = product.media.filter((m) => m.type === "golf");
-  const accommodationImages = product.media.filter((m) => m.type === "accommodation");
-  const diningImages = product.media.filter((m) => m.type === "dining");
+  const orderedImages = product.media
+    .filter((m) => m.type !== "youtube")
+    .slice()
+    .sort((a, b) => a.order - b.order);
   const youtubeVideos = product.media.filter((m) => m.type === "youtube");
-  const heroImage = golfImages[0] ?? accommodationImages[0] ?? null;
+  const bodyText = product.rawText ? stripContacts(product.rawText).trim() : "";
 
   return (
     <>
@@ -139,17 +141,6 @@ export default async function ProductDetailPage({
             >
               ← 홈으로 돌아가기
             </Link>
-
-            {heroImage && (
-              <div className="mt-5 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-neutral-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={heroImage.url}
-                  alt={heroImage.caption ?? product.destination}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            )}
 
             <h1 className="mt-6 text-3xl md:text-5xl font-black leading-tight text-neutral-900">
               {product.destination}
@@ -188,9 +179,42 @@ export default async function ProductDetailPage({
           </div>
         </section>
 
-        <MediaGallery title="골프장" images={golfImages} />
-        <MediaGallery title="숙소" images={accommodationImages} />
-        <MediaGallery title="식음료" images={diningImages} />
+        {bodyText && (
+          <section className="px-5 py-10 md:px-8 md:py-14">
+            <div className="mx-auto max-w-4xl">
+              <h2 className="text-2xl md:text-3xl font-black text-neutral-900">
+                상세 안내
+              </h2>
+              <p className="mt-6 whitespace-pre-wrap text-lg leading-relaxed text-neutral-800">
+                {bodyText}
+              </p>
+            </div>
+          </section>
+        )}
+
+        {orderedImages.length > 0 && (
+          <section className="px-5 pb-4 md:px-8">
+            <div className="mx-auto max-w-4xl space-y-5">
+              {orderedImages.map((img) => (
+                <figure key={img.id}>
+                  <div className="overflow-hidden rounded-2xl bg-neutral-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.url}
+                      alt={img.caption ?? product.destination}
+                      className="w-full"
+                    />
+                  </div>
+                  {img.caption && (
+                    <figcaption className="mt-2 text-base text-neutral-600">
+                      {img.caption}
+                    </figcaption>
+                  )}
+                </figure>
+              ))}
+            </div>
+          </section>
+        )}
 
         {youtubeVideos.length > 0 && (
           <section className="px-5 py-10 md:px-8 md:py-14">
@@ -316,44 +340,5 @@ function InfoCell({
         {value}
       </p>
     </div>
-  );
-}
-
-function MediaGallery({
-  title,
-  images,
-}: {
-  title: string;
-  images: { id: string; url: string; caption: string | null }[];
-}) {
-  if (images.length === 0) return null;
-  return (
-    <section className="px-5 py-10 md:px-8 md:py-14">
-      <div className="mx-auto max-w-4xl">
-        <h2 className="text-2xl md:text-3xl font-black text-neutral-900">
-          {title}
-        </h2>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {images.map((img) => (
-            <div
-              key={img.id}
-              className="overflow-hidden rounded-2xl border-2 border-neutral-100 bg-neutral-100"
-            >
-              <div className="aspect-[4/3] w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={img.url}
-                  alt={img.caption ?? title}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              {img.caption && (
-                <p className="px-3 py-2 text-sm text-neutral-600">{img.caption}</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
   );
 }
