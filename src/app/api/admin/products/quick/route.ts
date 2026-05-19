@@ -11,6 +11,7 @@ import {
   formatOperatorLine,
 } from "@/lib/contact-replacer";
 import { classifyImage } from "@/lib/media-classifier";
+import { cleanPostText } from "@/lib/clean-post-text";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -33,7 +34,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "본문을 입력해주세요." }, { status: 400 });
   }
 
-  const cleaned = stripContacts(text);
+  const cleanText = cleanPostText(text);
+  const cleaned = stripContacts(cleanText);
   const parsed = cleaned ? await parseProduct(cleaned) : null;
   if (!parsed) {
     return NextResponse.json(
@@ -66,7 +68,7 @@ export async function POST(req: Request) {
       included: includedFinal,
       excluded: excludedFinal,
       sourceUrl: null,
-      rawText: text,
+      rawText: cleanText,
       autoImported: false,
     },
   });

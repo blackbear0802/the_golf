@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { stripContacts } from "@/lib/contact-replacer";
+import { cleanPostText } from "@/lib/clean-post-text";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -127,7 +128,9 @@ export default async function ProductDetailPage({
     .slice()
     .sort((a, b) => a.order - b.order);
   const youtubeVideos = product.media.filter((m) => m.type === "youtube");
-  const bodyText = product.rawText ? stripContacts(product.rawText).trim() : "";
+  const bodyText = product.rawText
+    ? stripContacts(cleanPostText(product.rawText)).trim()
+    : "";
 
   return (
     <>
