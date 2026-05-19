@@ -1,5 +1,7 @@
 // 어드민 상품 입력 검증/정규화 (POST/PATCH 공용)
 
+import { regionFieldsFor } from "./regions";
+
 export type ProductInput = {
   destination?: unknown;
   golfCourse?: unknown;
@@ -17,6 +19,8 @@ export type ProductInput = {
 
 export type ParsedProduct = {
   destination: string;
+  countryCode: string | null;
+  regionCode: string | null;
   golfCourse: string | null;
   departureDate: Date;
   departureLabel: string | null;
@@ -96,6 +100,7 @@ export function parseProductInput(
   return {
     data: {
       destination,
+      ...regionFieldsFor(destination),
       golfCourse: trimOrNull(input.golfCourse),
       departureDate,
       departureLabel: trimOrNull(input.departureLabel),

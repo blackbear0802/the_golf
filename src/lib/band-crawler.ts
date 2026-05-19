@@ -24,6 +24,7 @@ import {
 } from "@/lib/contact-replacer";
 import { storeFromUrl } from "@/lib/media-storage";
 import { classifyImage } from "@/lib/media-classifier";
+import { regionFieldsFor } from "@/lib/regions";
 
 const MAX_POSTS_PER_RUN = 5;
 const MAX_IMAGES_PER_POST = 20;
@@ -141,9 +142,17 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
         ];
         const excludedFinal = stripContactsFromArray(parsed.excluded);
 
+        const region = regionFieldsFor(parsed.destination);
+        if (!region.regionCode) {
+          console.warn(
+            `[regions] 크롤 destination 미매핑 — 매트릭스 비노출: "${parsed.destination}" (post ${post.postKey})`
+          );
+        }
+
         const created = await prisma.product.create({
           data: {
             destination: parsed.destination,
+            ...region,
             golfCourse: parsed.golfCourse,
             departureDate: new Date(`${parsed.departureDate}T00:00:00.000Z`),
             departureLabel: parsed.departureLabel,

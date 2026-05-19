@@ -63,3 +63,16 @@
 - **백필:** `scripts/backfill-region-codes.ts`(멱등 — 이미 일치하면 스킵). investigate 스크립트와 동일한 PrismaPg+dotenv 패턴.
 - **백필 결과(검증 기준값 갱신):** 조사 시점 10건 → 현재 **11건**(중국 yancheng가 4→5, 신규 1건 유입). **전량 매핑, 미매핑 0**. regionCode 분포: yancheng 5, chiangmai/danang/fukuoka/tokyo/cebu/kotakinabalu 각 1. §1 노트의 "합계 10" 기준값은 **11로 갱신**(매트릭스↔목록 일치 검증 시 이 값 사용, 월 분해는 §4에서 재확인).
 - 다음은 §4 매트릭스 페이지(`/packages`, 서버 컴포넌트 groupBy+ISR) + §5 `/search` 확장. DB 변경 없음.
+
+## 2026-05-19 (§3·§4·§5·§6 — 완료)
+
+- **§3 파서 연결 — 단일 헬퍼 `regionFieldsFor(destination)`:** `{countryCode,regionCode}` 또는 둘 다 null 반환. 3개 생성 경로에 주입:
+  - 어드민 수동 POST/PATCH: `parseProductInput`(admin-product.ts) 출력 `ParsedProduct`에 두 필드 추가 → 단일 chokepoint로 POST·PATCH 동시 커버(destination 수정 시 코드 자동 갱신).
+  - 빠른등록(`/api/admin/products/quick`)·밴드 크롤러(`band-crawler.ts`): claude-parser 출력이라 parseProductInput 안 거침 → 생성 직전 `regionFieldsFor` spread + 미매핑 시 `console.warn`(상품 생성은 막지 않음, degrade 허용).
+- **§4 groupBy → findMany+JS 버킷:** Prisma `groupBy`는 departureDate에서 '월' 파생 불가(raw SQL 필요). 현 규모(수십 건)에선 findMany 후 JS로 `counts[regionCode][month]` 집계가 단순·정확하고 `/search` WHERE와 동일 의미 유지가 쉬움. 계획의 "groupBy"는 의미상 대체(집계 동일). context 기록.
+- **ISR vs Dynamic:** `revalidate=3600` 선언했으나 Prisma 비캐시 fetch라 빌드 산출물상 `/packages`는 ƒ(Dynamic, 요청 시 SSR). 트래픽·규모 작아 force-static 강제는 과설계라 미적용. 신선도(크롤/어드민 반영)에도 유리.
+- **§4 행 구성:** `orderedRegionCodes()`(displayOrder 순) 중 해당 연도 상품 ≥1인 지역만. 빈 지역 행 비노출.
+- **Sticky 설계:** 4단계 z-index(코너 z30 / 헤더행 z20 / 첫열 z10 / 본문 z0), 불투명 배경(neutral-50·white), border 대신 inset shadow(코너는 -1 -1 양방향), 컨테이너 `overscroll-x-none`. 설계서 권고 그대로.
+- **§5 공존:** 기존 q/destination/nights/price 분기 **무변경**, 뒤에 countryCode/regionCode/month(YYYY-MM 정규식) AND 추가만. month는 `Date.UTC` gte/lt — 매트릭스 집계와 **동일 식**이라 건수 일치가 구조적으로 보장.
+- **§6 검증:** `scripts/verify-matrix-search.ts`로 전 (지역×월) 셀에 대해 매트릭스 버킷 == `/search` count 단언 → 활성 7셀 불일치 0(샘플: 치앙마이 2026-06=1, 다낭 2026-06=1, 후쿠오카 2026-07=1). `npm run build` 통과. **미실시:** 라이브 sticky 육안/스크린리더 청취(코드는 완료, 실행 환경 필요).
+- **남은 일:** 메모리 갱신, `/packages` 진입 동선(Header/홈) 노출 위치는 계획 범위 밖 — 사용자 결정 대기.

@@ -45,6 +45,9 @@ export default async function SearchPage({
     nights?: string;
     price?: string;
     sort?: string;
+    countryCode?: string;
+    regionCode?: string;
+    month?: string;
   }>;
 }) {
   const sp = await searchParams;
@@ -53,6 +56,10 @@ export default async function SearchPage({
   const nightsFilter = sp.nights ? Number(sp.nights) : undefined;
   const priceBucket = sp.price ? PRICE_BUCKETS[sp.price] : undefined;
   const sort = (sp.sort ?? "departure") as SortMode;
+  const countryCode = sp.countryCode?.trim();
+  const regionCode = sp.regionCode?.trim();
+  // 매트릭스 셀 딥링크용 YYYY-MM. 매트릭스 집계와 동일 WHERE를 만들어 건수 일치 보장
+  const monthMatch = sp.month?.trim().match(/^(\d{4})-(\d{2})$/);
 
   const where: Record<string, unknown> = {};
 
@@ -74,6 +81,20 @@ export default async function SearchPage({
   }
   if (priceBucket) {
     where.price = priceBucket;
+  }
+  if (countryCode) {
+    where.countryCode = countryCode;
+  }
+  if (regionCode) {
+    where.regionCode = regionCode;
+  }
+  if (monthMatch) {
+    const y = Number(monthMatch[1]);
+    const m = Number(monthMatch[2]);
+    where.departureDate = {
+      gte: new Date(Date.UTC(y, m - 1, 1)),
+      lt: new Date(Date.UTC(y, m, 1)),
+    };
   }
 
   const [products, allDestinations] = await Promise.all([

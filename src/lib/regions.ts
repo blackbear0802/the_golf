@@ -55,6 +55,20 @@ export function mapDestination(destination: string | null | undefined): RegionCo
   return { countryCode: meta.countryCode, regionCode };
 }
 
+/**
+ * product create/update의 data에 펼쳐 쓰는 형태.
+ * 매핑 실패 시 둘 다 null(상품 생성을 막지 않음 — 매트릭스만 비노출).
+ */
+export function regionFieldsFor(
+  destination: string | null | undefined
+): { countryCode: string | null; regionCode: string | null } {
+  const codes = mapDestination(destination);
+  return {
+    countryCode: codes?.countryCode ?? null,
+    regionCode: codes?.regionCode ?? null,
+  };
+}
+
 /** 매트릭스 세로축 순서(displayOrder 오름차순)의 regionCode 목록. */
 export function orderedRegionCodes(): string[] {
   return Object.entries(REGION_META)

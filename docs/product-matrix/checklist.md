@@ -27,26 +27,27 @@
 - [ ] 매핑 실패 시 null + 경고 로깅(상품 생성은 막지 않음)
 
 ## 4. 매트릭스 페이지
-- [ ] `src/app/packages/page.tsx` — 서버 컴포넌트, Prisma `groupBy`(연·월×region), ISR `revalidate`
-- [ ] `src/components/MatrixGrid.tsx` — 12열 grid, 4단계 Z-index Sticky
-- [ ] Sticky 함정 대응: 불투명 배경, `border` 대신 `shadow-[inset...]`, `overscroll-behavior-x:none`
-- [ ] 빈 셀 비활성(커서·클릭 차단·옅은 회색), 활성 셀 브랜드색 + hover
-- [ ] 활성 셀 `<a href="/search?countryCode=..&regionCode=..&month=YYYY-MM">` + 동적 `aria-label`
-- [ ] 스크롤 복원(라우팅 단)
+- [x] `src/app/packages/page.tsx` — 서버 컴포넌트, findMany+JS 버킷(month 파생 불가→groupBy 대체), `revalidate=3600`
+- [x] `src/components/MatrixGrid.tsx` — 12열 표, 4단계 Z-index Sticky
+- [x] Sticky 함정 대응: 불투명 배경, `border` 대신 `shadow-[inset...]`, `overscroll-x-none`
+- [x] 빈 셀 비활성(커서·클릭 차단·옅은 회색 ·), 활성 셀 warm 색 + hover
+- [x] 활성 셀 `<Link href="/search?countryCode=..&regionCode=..&month=YYYY-MM">` + 동적 `aria-label`
+- [x] 스크롤 복원 — Next.js App Router 기본 동작에 위임(별도 코드 불필요)
 
 ## 5. /search 확장 (재사용)
-- [ ] `countryCode`·`regionCode`·`month` 쿼리 파라미터 해석 추가
-- [ ] 기존 destination/nights/price 필터와 공존(회귀 없음)
-- [ ] 매트릭스 셀 숫자 = `/search` 결과 건수 **정확 일치** 확인(동일 WHERE)
+- [x] `countryCode`·`regionCode`·`month`(YYYY-MM) 쿼리 파라미터 해석 추가
+- [x] 기존 q/destination/nights/price 필터와 AND 공존(기존 분기 무변경)
+- [x] 매트릭스 셀 숫자 = `/search` 결과 건수 **정확 일치** — 동일 WHERE, 데이터 검증 통과
 
 ## 6. 검증
-- [ ] `npm run build` 통과
-- [ ] 매트릭스 숫자 ↔ 셀 클릭 후 `/search` 건수 일치(샘플 3셀)
-- [ ] 빈 셀 클릭 불가·활성 셀만 링크
-- [ ] 모바일(375)·태블릿(768)·데스크톱 가로/세로 스크롤 시 4겹 헤더 안 무너짐
-- [ ] 스크린리더 셀 `aria-label` 문맥 읽힘
-- [ ] `/search` 기존 진입(destination 등) 회귀 없음
+- [x] `npm run build` 통과 (BUILD_EXIT=0)
+- [x] 매트릭스 숫자 ↔ `/search` 건수 일치 → `scripts/verify-matrix-search.ts` 활성 7셀 불일치 0
+- [x] 빈 셀 클릭 불가(`<td>` 텍스트·cursor-not-allowed)·활성 셀만 `<Link>`
+- [ ] 모바일(375)·태블릿(768)·데스크톱 가로/세로 스크롤 시 4겹 헤더 안 무너짐 — **라이브 육안 확인 미실시**
+- [ ] 스크린리더 셀 `aria-label` 문맥 읽힘 — aria-label 구현 완료, 실제 SR 청취 미실시
+- [x] `/search` 기존 진입(destination 등) 회귀 없음 — 기존 분기 무변경, tsc/build 통과
 
 ## 7. 마무리
-- [ ] context-notes 결정·근거 기록
-- [ ] 메모리 갱신([[project-progress]] 매트릭스 추가, [[project-band-crawl]] destination 코드화 메모)
+- [x] context-notes 결정·근거 기록
+- [x] 메모리 갱신(project-product-matrix·project-progress·project-band-crawl·MEMORY.md 인덱스)
+- [ ] (후속) `/packages` 진입 동선(Header/홈) 노출 위치 결정 — 계획 범위 밖, 사용자 확인
