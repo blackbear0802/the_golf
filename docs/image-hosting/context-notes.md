@@ -8,3 +8,9 @@
 - **사용자 선행 필수:** Blob 스토어 생성은 Vercel 대시보드 작업이라 에이전트 불가. BAND 키와 동일하게 사용자 의존 단계로 분리.
 - **검증 한계 명시:** 진짜 대상(밴드 CDN URL)은 OAuth 크롤 가동 후라야 검증 가능. 그 전엔 임의 공개 이미지 URL로 storeFromUrl 단위 검증까지만. 1순위(BAND 키)와 의존 관계 — 이 작업은 1순위 풀리면 가치 실현.
 - **비목표 명시:** 리사이즈/최적화·기존 상품 마이그레이션·docx 이미지 추출·dedup 제외(범위 폭주 방지).
+
+## 2026-05-19 (구현·검증 중 블로커)
+
+- `@vercel/blob ^2.4.0` 설치, `storeFromUrl` 구현(fetch→put public, 실패/토큰없음 시 원본 URL 폴백), `.env.example` 항목 추가. `npm run build` 통과.
+- **블로커(계측으로 확정):** 사용자가 만든 Blob 스토어가 **private**. `put(access:"public")`가 "Cannot use public access on a private store"로 거부됨. 토큰·fetch·업로드 코드는 정상(진단 시 fetch 200·5309B까지 정상, put에서만 실패).
+- **해결:** 상품 이미지는 브라우저가 `<img src>`로 직접 받는 공개 이미지라 **public 스토어** 필수(private은 함수 프록시+전송비↑로 부적합). Vercel Blob 스토어 access는 생성 시 결정이라 보통 사후 변경 불가 → **public 스토어 새로 생성→프로젝트 연결→새 BLOB_READ_WRITE_TOKEN을 .env/Vercel에 반영**. 코드는 그대로(`access:"public"` 정답), 폴백 덕에 그 전까지 배포·크롤 무해.
