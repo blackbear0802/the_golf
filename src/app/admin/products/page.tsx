@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
+import DeleteProductButton from "@/components/admin/DeleteProductButton";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("ko-KR").format(price);
@@ -39,7 +40,10 @@ export default async function AdminProductsPage({
     prisma.product.findMany({
       where,
       orderBy: { departureDate: "asc" },
-      include: { _count: { select: { media: true, bookings: true } } },
+      include: {
+        _count: { select: { media: true } },
+        bookings: { select: { status: true } },
+      },
     }),
     prisma.product.count({ where: { autoImported: true } }),
     prisma.product.count({ where: { autoImported: false } }),
@@ -99,7 +103,14 @@ export default async function AdminProductsPage({
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
+              {products.map((p) => {
+                const totalBookings = p.bookings.length;
+                const cancelledBookings = p.bookings.filter(
+                  (b) => b.status === "cancelled"
+                ).length;
+                const activeBookings = totalBookings - cancelledBookings;
+                const deletable = activeBookings === 0;
+                return (
                 <tr key={p.id} className="border-b border-neutral-100">
                   <td className="px-4 py-3">
                     <Link
@@ -132,17 +143,40 @@ export default async function AdminProductsPage({
                     )}
                   </td>
                   <td className="px-4 py-3 text-neutral-700">{p._count.media}개</td>
-                  <td className="px-4 py-3 text-neutral-700">{p._count.bookings}건</td>
+                  <td className="px-4 py-3 text-neutral-700 whitespace-nowrap">
+                    {totalBookings}건
+                    {cancelledBookings > 0 && (
+                      <span className="ml-1 text-xs text-neutral-400">
+                        (취소 {cancelledBookings})
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/products/${p.id}/edit`}
-                      className="inline-flex h-9 items-center rounded-lg border border-warm-300 px-3 text-sm font-bold text-warm-700 transition-colors hover:bg-warm-50"
-                    >
-                      수정
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/admin/products/${p.id}/edit`}
+                        className="inline-flex h-9 items-center rounded-lg border border-warm-300 px-3 text-sm font-bold text-warm-700 transition-colors hover:bg-warm-50"
+                      >
+                        수정
+                      </Link>
+                      {deletable ? (
+                        <DeleteProductButton
+                          productId={p.id}
+                          destination={p.destination}
+                        />
+                      ) : (
+                        <span
+                          className="text-xs text-neutral-400 whitespace-nowrap"
+                          title="취소되지 않은 예약이 연결되어 삭제할 수 없습니다."
+                        >
+                          활성 예약 {activeBookings}건
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}
