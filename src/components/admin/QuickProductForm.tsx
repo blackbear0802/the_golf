@@ -9,6 +9,7 @@ export default function QuickProductForm() {
   const router = useRouter();
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [youtube, setYoutube] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -52,11 +53,16 @@ export default function QuickProductForm() {
       }
     }
 
+    const youtubeUrls = youtube
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
     setStatus("AI 분석 중 …");
     const res = await fetch("/api/admin/products/quick", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: text.trim(), imageUrls }),
+      body: JSON.stringify({ text: text.trim(), imageUrls, youtubeUrls }),
     });
 
     if (!res.ok) {
@@ -153,6 +159,21 @@ export default function QuickProductForm() {
         {files.length > 0 && (
           <p className="mt-2 text-sm text-neutral-500">{files.length}장 선택됨</p>
         )}
+      </div>
+
+      <div>
+        <label htmlFor="qyoutube" className="block text-base font-bold text-neutral-800">
+          유튜브 링크 (선택)
+        </label>
+        <p className="mt-1 text-sm text-neutral-500">한 줄에 하나씩. 영상으로 등록됩니다.</p>
+        <textarea
+          id="qyoutube"
+          rows={3}
+          value={youtube}
+          onChange={(e) => setYoutube(e.target.value)}
+          placeholder={"https://www.youtube.com/watch?v=...\nhttps://youtu.be/..."}
+          className="mt-2 w-full rounded-xl border-2 border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-warm-500 focus:outline-none"
+        />
       </div>
 
       {error && (

@@ -23,6 +23,11 @@ export async function POST(req: Request) {
   const imageUrls: string[] = Array.isArray(body.imageUrls)
     ? body.imageUrls.filter((u: unknown): u is string => typeof u === "string" && !!u)
     : [];
+  const youtubeUrls: string[] = Array.isArray(body.youtubeUrls)
+    ? body.youtubeUrls
+        .filter((u: unknown): u is string => typeof u === "string" && !!u.trim())
+        .map((u: string) => u.trim())
+    : [];
 
   if (!text) {
     return NextResponse.json({ error: "본문을 입력해주세요." }, { status: 400 });
@@ -66,16 +71,28 @@ export async function POST(req: Request) {
     },
   });
 
-  if (imageUrls.length > 0) {
-    await prisma.productMedia.createMany({
-      data: imageUrls.map((url, i) => ({
-        productId: created.id,
-        type: classifyImage(url, null, text),
-        url,
-        order: i,
-      })),
-    });
+  const mediaRows: Array<{
+    productId: string;
+    type: "golf" | "accommodation" | "dining" | "youtube";
+    url: string;
+    order: number;
+  }> = [
+    ...imageUrls.map((url, i) => ({
+      productId: created.id,
+      type: classifyImage(url, null, text),
+      url,
+      order: i,
+    })),
+    ...youtubeUrls.map((url, i) => ({
+      productId: created.id,
+      type: "youtube" as const,
+      url,
+      order: imageUrls.length + i,
+    })),
+  ];
+  if (mediaRows.length > 0) {
+    await prisma.productMedia.createMany({ data: mediaRows });
   }
 
-  return NextResponse.json({ id: created.id, mediaCount: imageUrls.length });
+  return NextResponse.json({ id: created.id, mediaCount: mediaRows.length });
 }
