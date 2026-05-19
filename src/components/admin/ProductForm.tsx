@@ -206,7 +206,7 @@ export default function ProductForm(props: Props) {
             id="price"
             type="number"
             min={0}
-            step={10000}
+            step={1}
             value={form.price}
             onChange={(e) =>
               update("price", e.target.value === "" ? "" : Number(e.target.value))
