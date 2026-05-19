@@ -10,6 +10,13 @@
 - **이미지 분류 한계:** classifyImage는 url/파일명+본문 컨텍스트 기반. 밴드 이미지 파일명 무의미 시 본문으로만 분류 → 대략값. 생성 후 어드민 보정 전제.
 - **의존:** public Blob 스토어·토큰([[image-hosting]] 완료). 1순위 BAND 키와 무관하게 지금 가치 있음(수동 등록 가속).
 
+## 2026-05-19 (.docx 업로드 추가 — 비목표 해제)
+
+- 사용자 워크플로가 Word(.docx, 이미지 임베드) 기반임이 확정 + band.us HYPERLINK는 이미지로 복원 불가(인증 벽). → 기존 비목표였던 docx 추출을 채택.
+- **클라이언트 측 추출 결정:** QuickProductForm에서 JSZip으로 .docx(zip) 파싱 — `word/document.xml` 텍스트 + `word/media/*` 이미지. 추출 이미지는 기존 files state로 흘려보내 **기존 클라이언트→Blob 업로드 경로 그대로 재사용**(서버 zip 의존·4.5MB 한도 회피). 서버 신규 코드 0.
+- 텍스트는 `cleanPostText`로 HYPERLINK/band.us 노이즈 제거 후 textarea 채움. 드롭존은 그대로 병행 유지(사용자 선택: 둘 다).
+- jszip 의존 1개 추가(브라우저 친화·소형).
+
 ## 2026-05-19 (구현·검증)
 
 - 4파일 신규 + 진입버튼. `npm run build` 통과, 커밋 `b4b1dcb` 배포.

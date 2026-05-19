@@ -4,6 +4,16 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
+import JSZip from "jszip";
+import { cleanPostText } from "@/lib/clean-post-text";
+
+const IMG_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+};
 
 export default function QuickProductForm() {
   const router = useRouter();
@@ -15,6 +25,57 @@ export default function QuickProductForm() {
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const docxRef = useRef<HTMLInputElement>(null);
+  const [docxNote, setDocxNote] = useState("");
+
+  async function loadDocx(file: File) {
+    setError("");
+    setDocxNote("Word 파일 분석 중 …");
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const docXml = await zip.file("word/document.xml")?.async("string");
+      if (!docXml) {
+        setDocxNote("");
+        setError(".docx 문서를 읽을 수 없습니다 (형식 확인).");
+        return;
+      }
+      const t = cleanPostText(
+        docXml
+          .replace(/<\/w:p>/g, "\n")
+          .replace(/<w:tab\s*\/>/g, "\t")
+          .replace(/<w:br\s*\/>/g, "\n")
+          .replace(/<[^>]+>/g, "")
+          .replace(/&#x([0-9a-fA-F]+);/g, (_, c) =>
+            String.fromCodePoint(parseInt(c, 16))
+          )
+          .replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(parseInt(c, 10)))
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+      );
+      const names = Object.keys(zip.files).filter((n) =>
+        /^word\/media\/.+\.(jpe?g|png|gif|webp)$/i.test(n)
+      );
+      const imgs: File[] = [];
+      for (const name of names) {
+        const ext = name.split(".").pop()!.toLowerCase();
+        const blob = await zip.files[name].async("blob");
+        imgs.push(
+          new File([blob], name.split("/").pop()!, {
+            type: IMG_MIME[ext] ?? "image/jpeg",
+          })
+        );
+      }
+      if (t) setText(t);
+      if (imgs.length) setFiles((prev) => [...prev, ...imgs]);
+      setDocxNote(`Word에서 불러옴 — 본문 ${t.length}자 · 이미지 ${imgs.length}장`);
+    } catch {
+      setDocxNote("");
+      setError("Word 파일 분석 실패.");
+    }
+  }
 
   function addFiles(list: FileList | null) {
     if (!list) return;
@@ -82,6 +143,38 @@ export default function QuickProductForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="rounded-2xl border-2 border-warm-200 bg-warm-50/50 p-5">
+        <p className="text-base font-black text-neutral-900">
+          📄 Word(.docx)에서 한 번에 불러오기
+        </p>
+        <p className="mt-1 text-sm text-neutral-600">
+          원본 글을 붙여넣은 Word 파일을 올리면 본문과 안에 든 이미지를 자동으로 채웁니다.
+          (band.us 링크는 이미지로 불러올 수 없어 Word 임베드 이미지를 사용)
+        </p>
+        <button
+          type="button"
+          onClick={() => docxRef.current?.click()}
+          disabled={busy}
+          className="mt-3 flex h-12 items-center rounded-xl border-2 border-warm-300 bg-white px-5 text-base font-bold text-warm-700 transition-colors hover:bg-warm-50 disabled:opacity-50"
+        >
+          Word 파일 선택 (.docx)
+        </button>
+        <input
+          ref={docxRef}
+          type="file"
+          accept=".docx"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) loadDocx(f);
+            e.target.value = "";
+          }}
+        />
+        {docxNote && (
+          <p className="mt-3 text-sm font-medium text-warm-700">{docxNote}</p>
+        )}
+      </div>
+
       <div>
         <label htmlFor="qtext" className="block text-base font-bold text-neutral-800">
           게시글 본문 *
