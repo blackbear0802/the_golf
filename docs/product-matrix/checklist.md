@@ -23,8 +23,8 @@
 
 ## 3. 상수 / 파서
 - [x] `src/lib/regions.ts` — country/region 라벨·정렬순서·destination 큐레이션 맵 + 헤더 코멘트 (§2 백필이 import하므로 선행 생성)
-- [ ] 밴드 파서 경로에서 destination→`countryCode`/`regionCode` 채움(기존 destination 무변경, 추가만)
-- [ ] 매핑 실패 시 null + 경고 로깅(상품 생성은 막지 않음)
+- [x] 밴드 파서 경로에서 destination→`countryCode`/`regionCode` 채움(기존 destination 무변경, 추가만) — `band-crawler.ts:145`, `admin/products/quick/route.ts:56`, `admin-product.ts:103` 모두 `regionFieldsFor()` 주입
+- [x] 매핑 실패 시 null + 경고 로깅(상품 생성은 막지 않음) — 빠른등록·크롤러 경로에 `console.warn` 추가
 
 ## 4. 매트릭스 페이지
 - [x] `src/app/packages/page.tsx` — 서버 컴포넌트, findMany+JS 버킷(month 파생 불가→groupBy 대체), `revalidate=3600`
@@ -43,8 +43,8 @@
 - [x] `npm run build` 통과 (BUILD_EXIT=0)
 - [x] 매트릭스 숫자 ↔ `/search` 건수 일치 → `scripts/verify-matrix-search.ts` 활성 7셀 불일치 0
 - [x] 빈 셀 클릭 불가(`<td>` 텍스트·cursor-not-allowed)·활성 셀만 `<Link>`
-- [ ] 모바일(375)·태블릿(768)·데스크톱 가로/세로 스크롤 시 4겹 헤더 안 무너짐 — **라이브 육안 확인 미실시**
-- [ ] 스크린리더 셀 `aria-label` 문맥 읽힘 — aria-label 구현 완료, 실제 SR 청취 미실시
+- [x] 모바일(375)·태블릿(768)·데스크톱(1280) 가로/세로 스크롤 시 4겹 헤더 안 무너짐 — 2026-05-21 라이브 검증(gstack-browse). 모바일·태블릿 가로 스크롤 시 좌측 2열(2026년 지역/월 + 지역명) sticky 유지, 활성 셀 5개 정상 노출. 활성 셀 클릭 동선은 라이브에서 SPA navigation 정상(`a[href="/search?countryCode=..."]` 딥링크: 다낭 6월 1건·염성 7월 2건 모두 매트릭스 숫자와 일치). 빈 셀은 `<a>` 없는 `<td>` + `cursor: not-allowed` 컴퓨티드 스타일.
+- [ ] 스크린리더 셀 `aria-label` 문맥 읽힘 — aria-label 구현 완료, 실제 SR 청취 미실시 (시각 검증으로 aria-label 문자열은 정확 — 예: "2026년 7월 중국 염성 골프 상품 2건, 목록 보기")
 - [x] `/search` 기존 진입(destination 등) 회귀 없음 — 기존 분기 무변경, tsc/build 통과
 
 ## 7. 마무리
