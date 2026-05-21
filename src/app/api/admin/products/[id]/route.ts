@@ -1,5 +1,6 @@
 // 어드민 상품 수정/삭제 API — role=admin 검증
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -25,6 +26,7 @@ export async function PATCH(
     where: { id },
     data: parsed.data,
   });
+  revalidatePath("/packages");
   return NextResponse.json({ id: updated.id });
 }
 
@@ -58,5 +60,6 @@ export async function DELETE(
     }),
     prisma.product.delete({ where: { id } }),
   ]);
+  revalidatePath("/packages");
   return NextResponse.json({ ok: true });
 }

@@ -1,5 +1,6 @@
 // 어드민 빠른 등록 API — 본문 텍스트 + 업로드된 Blob 이미지 URL → AI 파싱 → 상품+미디어 생성
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -105,5 +106,6 @@ export async function POST(req: Request) {
     await prisma.productMedia.createMany({ data: mediaRows });
   }
 
+  revalidatePath("/packages");
   return NextResponse.json({ id: created.id, mediaCount: mediaRows.length });
 }

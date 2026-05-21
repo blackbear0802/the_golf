@@ -1,5 +1,6 @@
 // 어드민 상품 등록 API (POST) — role=admin 검증
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -18,5 +19,6 @@ export async function POST(req: Request) {
   }
 
   const created = await prisma.product.create({ data: parsed.data });
+  revalidatePath("/packages");
   return NextResponse.json({ id: created.id });
 }
