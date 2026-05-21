@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import MatrixGrid, { type MatrixRow } from "@/components/MatrixGrid";
-import { REGION_META, orderedRegionCodes } from "@/lib/regions";
+import { parseDestination, compareRegions, type RegionInfo } from "@/lib/regions";
 
 // 기준연도 1개로 시작(전 데이터 2026). 연도 토글은 후순위 — context-notes 참조
 const BASE_YEAR = 2026;
@@ -27,30 +27,32 @@ export default async function PackagesMatrixPage() {
         lt: new Date(Date.UTC(BASE_YEAR + 1, 0, 1)),
       },
     },
-    select: { regionCode: true, departureDate: true },
+    select: { regionCode: true, departureDate: true, destination: true },
   });
 
   // counts[regionCode][month] — /search의 WHERE와 동일 조건으로 집계(건수 일치 강제)
+  // 행 메타는 정적 사전 대신 상품 destination을 자동 파싱해 동적 구성
   const counts: Record<string, Record<number, number>> = {};
+  const metaByRegion: Record<string, RegionInfo> = {};
   for (const p of products) {
     if (!p.regionCode) continue;
+    const info = parseDestination(p.destination);
+    if (!info) continue;
     const month = p.departureDate.getUTCMonth() + 1;
     (counts[p.regionCode] ??= {})[month] =
       (counts[p.regionCode]?.[month] ?? 0) + 1;
+    metaByRegion[p.regionCode] = info;
   }
 
-  // 해당 연도에 상품이 1건이라도 있는 지역만, displayOrder 순으로 행 구성
-  const rows: MatrixRow[] = orderedRegionCodes()
-    .filter((code) => counts[code])
-    .map((code) => {
-      const meta = REGION_META[code];
-      return {
-        regionCode: code,
-        countryCode: meta.countryCode,
-        countryName: meta.countryName,
-        regionName: meta.regionName,
-      };
-    });
+  // 해당 연도에 상품이 1건이라도 있는 지역만, 국가 order→지역명 가나다 순
+  const rows: MatrixRow[] = Object.values(metaByRegion)
+    .sort(compareRegions)
+    .map((info) => ({
+      regionCode: info.regionCode,
+      countryCode: info.countryCode,
+      countryName: info.countryName,
+      regionName: info.regionName,
+    }));
 
   const totalProducts = products.length;
 

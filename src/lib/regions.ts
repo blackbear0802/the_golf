@@ -1,58 +1,61 @@
-// 매트릭스용 국가/지역 메타 + destination 텍스트 → 코드 큐레이션 사전
+// 매트릭스용 destination 자동 파싱 — 안정적인 국가명만 사전 앵커로 두고
+// 그 뒤를 지역명으로 자동 분리. regionCode = "<국가코드>-<공백제거 지역명>".
 //
-// 자동 추론 불가(밴드 크롤 destination이 자유 텍스트). 사람이 큐레이션한
-// 정확 일치 사전이 단일 진실원. 사전에 없는 destination → null 반환
-// (매트릭스 비노출, 목록엔 destination으로 여전히 노출 — degrade 허용).
+// destination이 자유 텍스트(밴드 크롤·수동 등록 원문)라 국가 단위만 사람이
+// 큐레이션하고, 지역은 자동 추출한다. 알려진 국가명으로 시작하지 않으면 null
+// (매트릭스 비노출, 목록엔 destination으로 노출 — degrade 허용).
 
-export type RegionMeta = {
+// 국가명 → ISO alpha-2 + 매트릭스 국가 정렬순서(작을수록 위). 새 국가만 추가.
+const COUNTRY: Record<string, { code: string; order: number }> = {
+  태국: { code: "TH", order: 1 },
+  베트남: { code: "VN", order: 2 },
+  일본: { code: "JP", order: 3 },
+  필리핀: { code: "PH", order: 4 },
+  말레이시아: { code: "MY", order: 5 },
+  중국: { code: "CN", order: 6 },
+};
+
+// 같은 지역의 표기 변형을 표준 표기로 통일(파싱 전 정규화).
+// 동일 지역인데 표기만 다른 경우만 등록(자동 분리로는 못 합치는 케이스).
+const ALIAS: Record<string, string> = {
+  "중국 염성(쑤첸)": "중국 염성 쑤첸",
+  "중국 쑤첸": "중국 염성 쑤첸",
+  "일본 동경": "일본 도쿄",
+};
+
+export type RegionInfo = {
   countryCode: string;
   countryName: string;
+  countryOrder: number;
+  regionCode: string;
   regionName: string;
-  /** 매트릭스 세로축 정렬 순서(작을수록 위) */
-  displayOrder: number;
-};
-
-/** regionCode → 지역 메타. 매트릭스 세로축 라벨·정렬의 단일 출처. */
-export const REGION_META: Record<string, RegionMeta> = {
-  chiangmai: { countryCode: "TH", countryName: "태국", regionName: "치앙마이", displayOrder: 10 },
-  danang: { countryCode: "VN", countryName: "베트남", regionName: "다낭", displayOrder: 20 },
-  fukuoka: { countryCode: "JP", countryName: "일본", regionName: "후쿠오카", displayOrder: 30 },
-  tokyo: { countryCode: "JP", countryName: "일본", regionName: "도쿄", displayOrder: 31 },
-  cebu: { countryCode: "PH", countryName: "필리핀", regionName: "세부", displayOrder: 40 },
-  kotakinabalu: { countryCode: "MY", countryName: "말레이시아", regionName: "코타키나발루", displayOrder: 50 },
-  yancheng: { countryCode: "CN", countryName: "중국", regionName: "염성", displayOrder: 60 },
 };
 
 /**
- * raw destination(trim 후 정확 일치) → regionCode.
- * 중국 3변형(염성 쑤첸 / 쑤첸 / 염성(쑤첸))은 동일 지역이라 yancheng으로 흡수
- * (사용자 도메인 확정, context-notes 2026-05-19 참조).
+ * destination 텍스트를 국가/지역 정보로 자동 파싱.
+ * 알려진 국가명으로 시작 + 뒤에 지역명이 있어야 매핑. 그 외 null.
  */
-const DESTINATION_TO_REGION: Record<string, string> = {
-  "태국 치앙마이": "chiangmai",
-  "베트남 다낭": "danang",
-  "일본 후쿠오카": "fukuoka",
-  "일본 동경": "tokyo",
-  "필리핀 세부": "cebu",
-  "말레이시아 코타키나발루": "kotakinabalu",
-  "중국 염성 쑤첸": "yancheng",
-  "중국 쑤첸": "yancheng",
-  "중국 염성(쑤첸)": "yancheng",
-};
-
-export type RegionCodes = { countryCode: string; regionCode: string };
-
-/**
- * destination 텍스트를 country/region 코드로 매핑.
- * 사전에 없으면 null (호출부에서 경고·null 저장, 상품 생성은 막지 않음).
- */
-export function mapDestination(destination: string | null | undefined): RegionCodes | null {
+export function parseDestination(
+  destination: string | null | undefined
+): RegionInfo | null {
   if (!destination) return null;
-  const regionCode = DESTINATION_TO_REGION[destination.trim()];
-  if (!regionCode) return null;
-  const meta = REGION_META[regionCode];
-  if (!meta) return null;
-  return { countryCode: meta.countryCode, regionCode };
+  const raw = destination.trim();
+  if (!raw) return null;
+  const s = ALIAS[raw] ?? raw;
+  for (const [name, meta] of Object.entries(COUNTRY)) {
+    if (s.startsWith(name)) {
+      const regionName = s.slice(name.length).trim();
+      if (!regionName) return null;
+      return {
+        countryCode: meta.code,
+        countryName: name,
+        countryOrder: meta.order,
+        regionCode: `${meta.code}-${regionName.replace(/\s+/g, "")}`,
+        regionName,
+      };
+    }
+  }
+  return null;
 }
 
 /**
@@ -62,16 +65,18 @@ export function mapDestination(destination: string | null | undefined): RegionCo
 export function regionFieldsFor(
   destination: string | null | undefined
 ): { countryCode: string | null; regionCode: string | null } {
-  const codes = mapDestination(destination);
+  const info = parseDestination(destination);
   return {
-    countryCode: codes?.countryCode ?? null,
-    regionCode: codes?.regionCode ?? null,
+    countryCode: info?.countryCode ?? null,
+    regionCode: info?.regionCode ?? null,
   };
 }
 
-/** 매트릭스 세로축 순서(displayOrder 오름차순)의 regionCode 목록. */
-export function orderedRegionCodes(): string[] {
-  return Object.entries(REGION_META)
-    .sort((a, b) => a[1].displayOrder - b[1].displayOrder)
-    .map(([code]) => code);
+/**
+ * 매트릭스 세로축 정렬 비교자(국가 order → 지역명 한글 가나다).
+ * 정적 사전 대신 실제 데이터의 RegionInfo 목록을 정렬할 때 사용.
+ */
+export function compareRegions(a: RegionInfo, b: RegionInfo): number {
+  if (a.countryOrder !== b.countryOrder) return a.countryOrder - b.countryOrder;
+  return a.regionName.localeCompare(b.regionName, "ko");
 }

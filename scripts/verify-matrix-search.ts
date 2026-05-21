@@ -1,7 +1,7 @@
 // §6 검증 — 매트릭스 셀 집계 == /search WHERE 건수 일치 단언(전 셀 + 샘플 출력)
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { REGION_META, orderedRegionCodes } from "../src/lib/regions";
+import { parseDestination, type RegionInfo } from "../src/lib/regions";
 import "dotenv/config";
 
 const BASE_YEAR = 2026;
@@ -19,21 +19,24 @@ async function main() {
         lt: new Date(Date.UTC(BASE_YEAR + 1, 0, 1)),
       },
     },
-    select: { regionCode: true, departureDate: true },
+    select: { regionCode: true, departureDate: true, destination: true },
   });
   const counts: Record<string, Record<number, number>> = {};
+  const metaByRegion: Record<string, RegionInfo> = {};
   for (const p of products) {
     if (!p.regionCode) continue;
+    const info = parseDestination(p.destination);
+    if (!info) continue;
     const m = p.departureDate.getUTCMonth() + 1;
     (counts[p.regionCode] ??= {})[m] = (counts[p.regionCode]?.[m] ?? 0) + 1;
+    metaByRegion[p.regionCode] = info;
   }
 
   let checked = 0;
   let mismatches = 0;
   const samples: string[] = [];
 
-  for (const regionCode of orderedRegionCodes()) {
-    const meta = REGION_META[regionCode];
+  for (const [regionCode, meta] of Object.entries(metaByRegion)) {
     for (let m = 1; m <= 12; m++) {
       const matrixN = counts[regionCode]?.[m] ?? 0;
       // /search?countryCode=&regionCode=&month= 와 동일 WHERE
