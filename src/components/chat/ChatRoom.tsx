@@ -117,6 +117,7 @@ export default function ChatRoom({ initial }: Props) {
           role: "assistant",
           content: data.content,
           recommendedProducts: data.recommendedProducts ?? [],
+          link: data.link ?? null,
         },
       ]);
     } catch (e) {

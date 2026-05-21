@@ -1,6 +1,7 @@
-// AI 챗 메시지 풍선 + 추천 상품 카드 묶음 렌더러
+// AI 챗 메시지 풍선 + 추천 상품 카드 묶음 + 전체상품 링크 버튼 렌더러
+import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
-import type { RecommendedProduct } from "@/lib/chat-tools";
+import type { RecommendedProduct, CatalogLink } from "@/lib/chat-tools";
 
 export type Message =
   | { role: "user"; content: string }
@@ -8,6 +9,7 @@ export type Message =
       role: "assistant";
       content: string;
       recommendedProducts?: RecommendedProduct[];
+      link?: CatalogLink | null;
     };
 
 export default function ChatMessage({ message }: { message: Message }) {
@@ -22,6 +24,7 @@ export default function ChatMessage({ message }: { message: Message }) {
   }
 
   const products = message.recommendedProducts ?? [];
+  const link = message.link;
 
   return (
     <div className="flex flex-col gap-3">
@@ -51,6 +54,16 @@ export default function ChatMessage({ message }: { message: Message }) {
             />
           ))}
         </div>
+      )}
+
+      {link && (
+        <Link
+          href={link.href}
+          className="inline-flex w-fit items-center gap-2 rounded-xl bg-warm-500 px-5 py-3 text-base font-bold text-white transition-colors hover:bg-warm-600"
+        >
+          {link.label}
+          <span aria-hidden>→</span>
+        </Link>
       )}
     </div>
   );

@@ -7,8 +7,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { CHAT_SYSTEM_PROMPT } from "@/lib/chat-prompts";
 import {
   SEARCH_PRODUCTS_TOOL,
+  BROWSE_CATALOG_TOOL,
   executeSearchProducts,
+  buildCatalogLink,
   type RecommendedProduct,
+  type CatalogLink,
 } from "@/lib/chat-tools";
 import { checkRateLimit, getClientIp } from "@/lib/chat-rate-limit";
 
@@ -64,29 +67,43 @@ export async function POST(req: Request) {
   // 3) Anthropic 호출
   try {
     const client = getClient();
+    const tools = [SEARCH_PRODUCTS_TOOL, BROWSE_CATALOG_TOOL];
     const first = await client.messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
       system: CHAT_SYSTEM_PROMPT,
-      tools: [SEARCH_PRODUCTS_TOOL],
+      tools,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     });
 
     // 4) Tool 호출 분기
     const toolUseBlock = first.content.find((b) => b.type === "tool_use");
     let recommendedProducts: RecommendedProduct[] | undefined;
+    let catalogLink: CatalogLink | undefined;
     let finalText = "";
 
-    if (toolUseBlock && toolUseBlock.type === "tool_use" && toolUseBlock.name === "search_products") {
-      const args = (toolUseBlock.input ?? {}) as Parameters<typeof executeSearchProducts>[0];
-      recommendedProducts = await executeSearchProducts(args);
+    if (toolUseBlock && toolUseBlock.type === "tool_use") {
+      let toolResultContent: string;
+
+      if (toolUseBlock.name === "search_products") {
+        const args = (toolUseBlock.input ?? {}) as Parameters<typeof executeSearchProducts>[0];
+        const result = await executeSearchProducts(args);
+        recommendedProducts = result.products;
+        toolResultContent = JSON.stringify(result);
+      } else if (toolUseBlock.name === "browse_catalog") {
+        const args = (toolUseBlock.input ?? {}) as { destination?: string; month?: string };
+        catalogLink = buildCatalogLink(args);
+        toolResultContent = JSON.stringify({ link: catalogLink });
+      } else {
+        toolResultContent = JSON.stringify({ error: "알 수 없는 도구" });
+      }
 
       // tool_result를 messages에 append 후 한 번 더 호출
       const second = await client.messages.create({
         model: MODEL,
         max_tokens: MAX_TOKENS,
         system: CHAT_SYSTEM_PROMPT,
-        tools: [SEARCH_PRODUCTS_TOOL],
+        tools,
         messages: [
           ...messages.map((m) => ({ role: m.role, content: m.content })),
           { role: "assistant", content: first.content },
@@ -96,7 +113,7 @@ export async function POST(req: Request) {
               {
                 type: "tool_result" as const,
                 tool_use_id: toolUseBlock.id,
-                content: JSON.stringify(recommendedProducts),
+                content: toolResultContent,
               },
             ],
           },
@@ -111,6 +128,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       content: finalText.trim() || "죄송합니다, 다시 한 번 말씀해주시겠어요?",
       recommendedProducts: recommendedProducts ?? [],
+      link: catalogLink ?? null,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
