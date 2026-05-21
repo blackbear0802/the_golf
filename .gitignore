@@ -64,3 +64,4 @@ next-env.d.ts
 *_secret.txt
 claude_api_key.txt
 
+.gstack/

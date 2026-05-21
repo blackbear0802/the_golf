@@ -11,24 +11,24 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-warm-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-5 md:px-8">
-        <div className="flex items-center gap-3 md:gap-7">
+      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-3 md:px-8">
+        <div className="flex items-center gap-2 md:gap-7">
           <Link href="/" className="flex items-baseline">
-            <span className="text-2xl md:text-3xl font-black tracking-tight text-warm-600">
+            <span className="whitespace-nowrap text-xl md:text-3xl font-black tracking-tight text-warm-600">
               The Golf
             </span>
           </Link>
           <Link
             href="/packages"
-            className="flex h-10 md:h-12 items-center rounded-xl px-2 md:px-3 text-sm md:text-lg font-bold text-neutral-700 transition-colors hover:bg-warm-50 hover:text-warm-600"
+            className="flex h-9 md:h-12 items-center whitespace-nowrap rounded-xl px-2 md:px-3 text-xs md:text-lg font-bold text-neutral-700 transition-colors hover:bg-warm-50 hover:text-warm-600"
           >
             전체상품
           </Link>
         </div>
 
-        <nav className="flex items-center gap-2 md:gap-3">
+        <nav className="flex items-center gap-1.5 md:gap-3">
           {isLoading ? (
-            <div className="h-10 w-24 md:h-12 md:w-32" aria-hidden />
+            <div className="h-9 w-24 md:h-12 md:w-32" aria-hidden />
           ) : isAuthed ? (
             <>
               <span className="hidden md:inline text-base text-neutral-700">
@@ -37,7 +37,7 @@ export default function Header() {
               {session.user?.role === "admin" && (
                 <Link
                   href="/admin"
-                  className="flex h-10 md:h-12 items-center rounded-xl bg-neutral-900 px-3 md:px-5 text-sm md:text-lg font-bold text-white transition-colors hover:bg-neutral-800"
+                  className="flex h-9 md:h-12 items-center whitespace-nowrap rounded-xl bg-neutral-900 px-2.5 md:px-5 text-xs md:text-lg font-bold text-white transition-colors hover:bg-neutral-800"
                 >
                   관리자
                   <span className="hidden md:inline">페이지</span>
@@ -45,13 +45,13 @@ export default function Header() {
               )}
               <Link
                 href="/my"
-                className="flex h-10 md:h-12 items-center rounded-xl bg-warm-500 px-3 md:px-5 text-sm md:text-lg font-bold text-white transition-colors hover:bg-warm-600"
+                className="flex h-9 md:h-12 items-center whitespace-nowrap rounded-xl bg-warm-500 px-2.5 md:px-5 text-xs md:text-lg font-bold text-white transition-colors hover:bg-warm-600"
               >
                 마이페이지
               </Link>
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="hidden md:flex h-12 items-center rounded-xl border-2 border-neutral-300 px-5 text-lg font-bold text-neutral-700 transition-colors hover:bg-neutral-50"
+                className="hidden md:flex h-12 items-center whitespace-nowrap rounded-xl border-2 border-neutral-300 px-5 text-lg font-bold text-neutral-700 transition-colors hover:bg-neutral-50"
               >
                 로그아웃
               </button>
@@ -60,13 +60,13 @@ export default function Header() {
             <>
               <Link
                 href="/login"
-                className="flex h-10 md:h-12 items-center rounded-xl border-2 border-warm-500 px-3 md:px-5 text-sm md:text-lg font-bold text-warm-600 transition-colors hover:bg-warm-50"
+                className="flex h-9 md:h-12 items-center whitespace-nowrap rounded-xl border-2 border-warm-500 px-2.5 md:px-5 text-xs md:text-lg font-bold text-warm-600 transition-colors hover:bg-warm-50"
               >
                 로그인
               </Link>
               <Link
                 href="/register"
-                className="flex h-10 md:h-12 items-center rounded-xl bg-warm-500 px-3 md:px-5 text-sm md:text-lg font-bold text-white transition-colors hover:bg-warm-600"
+                className="flex h-9 md:h-12 items-center whitespace-nowrap rounded-xl bg-warm-500 px-2.5 md:px-5 text-xs md:text-lg font-bold text-white transition-colors hover:bg-warm-600"
               >
                 회원가입
               </Link>
