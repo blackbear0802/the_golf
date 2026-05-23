@@ -120,7 +120,7 @@ export default function BookingForm({
         disabled={loading}
         className="block h-16 w-full rounded-xl bg-warm-500 text-xl font-black text-white transition-colors hover:bg-warm-600 disabled:bg-neutral-300"
       >
-        {loading ? "접수 중..." : "예약 홀딩 신청하기"}
+        {loading ? "접수 중..." : "예약 신청하기"}
       </button>
       <p className="text-center text-sm text-neutral-500">
         신청하시면 24시간 이내에 전문 상담원이 전화드립니다
