@@ -17,11 +17,11 @@ export default async function FloatingDeals() {
 
   return (
     <>
-      <aside className="hidden lg:flex fixed right-5 top-28 z-30 w-72 flex-col rounded-2xl border-2 border-warm-200 bg-white shadow-xl">
+      <aside className="hidden lg:flex fixed right-5 top-28 z-30 w-72 h-[28rem] flex-col rounded-2xl border-2 border-warm-200 bg-white shadow-xl">
         <div className="rounded-t-2xl bg-warm-500 px-5 py-3 text-center">
           <p className="text-lg font-black text-white">🔥 지금 인기 투어</p>
         </div>
-        <ul className="max-h-[28rem] overflow-y-auto p-3">
+        <ul className="flex-1 overflow-y-auto p-3">
           {products.map((p) => (
             <li key={p.id}>
               <a
