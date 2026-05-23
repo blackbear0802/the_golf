@@ -76,3 +76,20 @@
 - **§5 공존:** 기존 q/destination/nights/price 분기 **무변경**, 뒤에 countryCode/regionCode/month(YYYY-MM 정규식) AND 추가만. month는 `Date.UTC` gte/lt — 매트릭스 집계와 **동일 식**이라 건수 일치가 구조적으로 보장.
 - **§6 검증:** `scripts/verify-matrix-search.ts`로 전 (지역×월) 셀에 대해 매트릭스 버킷 == `/search` count 단언 → 활성 7셀 불일치 0(샘플: 치앙마이 2026-06=1, 다낭 2026-06=1, 후쿠오카 2026-07=1). `npm run build` 통과. **미실시:** 라이브 sticky 육안/스크린리더 청취(코드는 완료, 실행 환경 필요).
 - **남은 일:** 메모리 갱신, `/packages` 진입 동선(Header/홈) 노출 위치는 계획 범위 밖 — 사용자 결정 대기.
+
+## 2026-05-23 (§6 코드 검증 + sticky 제약 기록)
+
+- **§3 체크리스트 불일치 해소:** 코드 확인 결과 `regionFieldsFor`가 3개 경로(admin-product.ts·quick route·band-crawler.ts) 전부 적용 완료 상태였음. context-notes 2026-05-19 §3 항목과 일치. 체크리스트만 갱신 안 된 것이라 체크 처리.
+
+- **§6 코드 분석 결과:**
+  - `warm-50`/`warm-700` → `globals.css @theme inline`에 정의됨 ✅
+  - `sticky left-0` (지역 열) + `sticky top-0 left-0` (코너) → `overflow-x-auto` 컨테이너 안 가로 스크롤에서 정상 동작 ✅
+  - z-30/20/10/0 단계 + 불투명 배경(`bg-neutral-50`/`bg-white`) → 스크롤 시 콘텐츠 투명/겹침 없음 ✅
+  - `border-separate border-spacing-0` → sticky 셀 경계 gap 없음 ✅
+
+- **알려진 제약 — sticky 헤더 행(top-0) 페이지 세로 스크롤 미동작:**
+  - CSS 규칙: `overflow-x: auto`를 설정하면 `overflow-y`도 `auto`로 계산됨 → 래퍼 div가 수직 스크롤 컨텍스트가 됨 → `sticky top-0`이 페이지 뷰포트가 아닌 래퍼 기준으로 작동 → 래퍼에 고정 높이가 없어 수직 오버플로 자체가 없음 → 페이지 세로 스크롤 시 헤더 행이 뷰포트에 고정되지 않음.
+  - **실질적 영향:** 현재 7행(7 지역) 기준 표 높이 ≈ 400px. 페이지 헤더/설명/푸터 포함 전체 페이지 높이 ≈ 700~800px. 모바일(667px) 기준 세로 스크롤 필요량이 50~150px에 불과하여 헤더 행이 뷰포트 밖으로 나가는 시나리오가 실질적으로 없음.
+  - **수정 기준:** 지역이 12행 이상으로 늘어나 페이지 세로 스크롤이 200px 이상 필요해지는 시점에 재검토. 수정 방향 = 래퍼에 `max-height: 100svh` + `overflow-y: auto` 추가해 표 자체가 수직 스크롤되도록 변경.
+
+- **육안 확인 미실시 항목:** 샌드박스 환경에 Node.js가 없어 dev 서버 실행 불가. 사용자가 `http://localhost:3000/packages` 를 열어 모바일 DevTools(375px/768px)에서 가로 스크롤 시 지역 열 sticky + z-index 레이어링 정상 여부 최종 확인 권장.
