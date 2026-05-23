@@ -1,14 +1,17 @@
-// AI 챗 대화창 — 메시지 리스트, 입력, sessionStorage로 대화 영속(로그인 우회 후 복귀 시 이어가기)
+// AI 챗 대화창 — NDJSON 스트리밍 수신, 로그인 시 DB 세션 복원
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import ChatMessage, { type Message } from "./ChatMessage";
+import type { RecommendedProduct, CatalogLink } from "@/lib/chat-tools";
 
 const STORAGE_KEY = "thegolf.chat.messages";
 
 type Props = { initial: string };
 
 export default function ChatRoom({ initial }: Props) {
+  const { status: authStatus } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,48 +22,73 @@ export default function ChatRoom({ initial }: Props) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // 마운트: 세션 ID 생성 + sessionStorage에서 대화 복원
+  // sessionStorage 복원 헬퍼
+  function restoreFromStorage() {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Message[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          initialSentRef.current = true;
+        }
+      }
+    } catch {
+      // 손상된 JSON 무시
+    }
+  }
+
+  // 마운트: authStatus 확정 후 세션 ID 생성 + 대화 복원
   useEffect(() => {
+    if (authStatus === "loading") return;
+
     if (!sessionIdRef.current) {
       sessionIdRef.current =
         typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
           : `s-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     }
-    if (typeof window !== "undefined") {
-      try {
-        const raw = sessionStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw) as Message[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMessages(parsed);
-            // 복원된 대화가 있으면 initial 자동 전송은 막는다
-            initialSentRef.current = true;
-          }
-        }
-      } catch {
-        // 손상된 JSON은 무시
-      }
-    }
-    setHydrated(true);
-  }, []);
 
-  // messages 바뀔 때마다 sessionStorage에 sync
+    if (authStatus === "authenticated") {
+      // 로그인: 서버 DB에서 복원 시도, 실패 시 sessionStorage 폴백
+      fetch("/api/chat/session")
+        .then((r) => r.json())
+        .then((data: { messages: { role: string; content: string }[]; sessionId: string | null }) => {
+          if (Array.isArray(data.messages) && data.messages.length > 0) {
+            setMessages(
+              data.messages.map((m): Message =>
+                m.role === "user"
+                  ? { role: "user", content: m.content }
+                  : { role: "assistant", content: m.content }
+              )
+            );
+            if (data.sessionId) sessionIdRef.current = data.sessionId;
+            initialSentRef.current = true;
+          } else {
+            restoreFromStorage();
+          }
+        })
+        .catch(() => restoreFromStorage())
+        .finally(() => setHydrated(true));
+    } else {
+      restoreFromStorage();
+      setHydrated(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus]);
+
+  // messages 바뀔 때마다 sessionStorage 동기화
   useEffect(() => {
     if (!hydrated) return;
-    if (typeof window === "undefined") return;
     try {
-      if (messages.length === 0) {
-        sessionStorage.removeItem(STORAGE_KEY);
-      } else {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-      }
+      if (messages.length === 0) sessionStorage.removeItem(STORAGE_KEY);
+      else sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
     } catch {
-      // quota 초과 등은 무시 (대화 영속이 핵심 기능은 아님)
+      // quota 초과 등 무시
     }
   }, [messages, hydrated]);
 
-  // initial query 자동 전송 (hydration 끝나고 한 번만, 복원된 대화 없을 때)
+  // initial query 자동 전송 (hydration 끝, 복원 없을 때 한 번)
   useEffect(() => {
     if (!hydrated) return;
     if (initialSentRef.current) return;
@@ -73,13 +101,13 @@ export default function ChatRoom({ initial }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, initial]);
 
-  // 스크롤을 항상 가장 아래로
+  // 스크롤 항상 최하단
   useEffect(() => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, loading]);
 
-  // 입력창에 항상 포커스 유지
+  // 입력창 포커스 유지
   useEffect(() => {
     if (loading) return;
     inputRef.current?.focus();
@@ -90,38 +118,115 @@ export default function ChatRoom({ initial }: Props) {
     if (!trimmed || loading) return;
 
     setError("");
-    const next: Message[] = [...messages, { role: "user", content: trimmed }];
-    setMessages(next);
+    const sendMessages: Message[] = [...messages, { role: "user", content: trimmed }];
+    setMessages(sendMessages);
     setInput("");
     setLoading(true);
+
+    let assistantAdded = false;
+    let fullContent = "";
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          messages: sendMessages.map((m) => ({ role: m.role, content: m.content })),
           sessionId: sessionIdRef.current,
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
         setError(data.error ?? "응답을 만들지 못했어요.");
         return;
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.content,
-          recommendedProducts: data.recommendedProducts ?? [],
-          link: data.link ?? null,
-        },
-      ]);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let event: {
+            type: string;
+            text?: string;
+            products?: RecommendedProduct[];
+            link?: CatalogLink | null;
+            sessionId?: string | null;
+            message?: string;
+          };
+          try {
+            event = JSON.parse(line);
+          } catch {
+            continue;
+          }
+
+          if (event.type === "delta" && event.text) {
+            fullContent += event.text;
+            if (!assistantAdded) {
+              assistantAdded = true;
+              setMessages((prev) => [
+                ...prev,
+                { role: "assistant", content: fullContent, recommendedProducts: [], link: null },
+              ]);
+            } else {
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.role === "assistant") {
+                  updated[updated.length - 1] = { ...last, content: fullContent };
+                }
+                return updated;
+              });
+            }
+          } else if (event.type === "done") {
+            if (event.sessionId) sessionIdRef.current = event.sessionId;
+            const products = Array.isArray(event.products) ? event.products : [];
+            const link = event.link ?? null;
+            setMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last?.role === "assistant") {
+                updated[updated.length - 1] = {
+                  ...last,
+                  content: fullContent || "죄송합니다, 다시 한 번 말씀해주시겠어요?",
+                  recommendedProducts: products,
+                  link,
+                };
+              }
+              return updated;
+            });
+          } else if (event.type === "error") {
+            setError(event.message ?? "응답을 만들지 못했어요.");
+            if (assistantAdded) setMessages((prev) => prev.slice(0, -1));
+          }
+        }
+      }
+
+      // 스트림이 끝났는데 응답이 없는 경우
+      if (!assistantAdded) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "죄송합니다, 다시 한 번 말씀해주시겠어요?",
+            recommendedProducts: [],
+            link: null,
+          },
+        ]);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "네트워크 오류가 발생했어요.");
+      if (assistantAdded) setMessages((prev) => prev.slice(0, -1));
     } finally {
       setLoading(false);
     }
@@ -131,8 +236,16 @@ export default function ChatRoom({ initial }: Props) {
     setMessages([]);
     setInput("");
     setError("");
-    initialSentRef.current = true; // 새 대화에서는 자동 전송 안 함
+    // 새 UUID로 리셋 → 다음 메시지에서 새 ChatSession 생성
+    sessionIdRef.current =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `s-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    initialSentRef.current = true;
   }
+
+  const lastIsAssistant =
+    messages.length > 0 && messages[messages.length - 1].role === "assistant";
 
   return (
     <div className="mx-auto flex h-[calc(100svh-5rem)] max-w-3xl flex-col px-4 md:px-6">
@@ -165,7 +278,7 @@ export default function ChatRoom({ initial }: Props) {
                 <ChatMessage message={m} />
               </li>
             ))}
-            {loading && (
+            {loading && !lastIsAssistant && (
               <li>
                 <TypingIndicator />
               </li>
