@@ -1,7 +1,10 @@
 // Phase 1 MVP 시드 데이터 (동남아/일본 시니어 골프 패키지 5개 + 미디어)
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+
+loadEnv({ path: ".env" });
+loadEnv({ path: "env" }); // 집PC 등 .env 없이 env 파일 쓰는 환경 대응
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
