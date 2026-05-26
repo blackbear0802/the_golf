@@ -67,14 +67,17 @@ export async function POST(req: Request) {
   ];
   const excludedFinal = stripContactsFromArray(parsed.excluded);
 
-  // 본문에서 '문의:'/'문의 :' 시작 줄 제거 → 잔여 공급자 연락처 strip → 끝에 우리 측 담당자 한 줄 append.
+  // 본문 정제 정책 — 차단어 줄 통째 삭제 → 잔여 공급자 연락처 strip → 끝에 우리 측 담당자 한 줄 append.
   // 표시 단계는 autoImported=false 행의 stripContacts 안전망을 건너뛰므로, 여기서 확실히 정제해 둬야 함.
+  // BODY_BLOCKLIST_TERMS 에 추가하면 그 단어를 포함한 줄은 본문에서 전부 사라짐(예: 공급자명).
+  const BODY_BLOCKLIST_TERMS = ["문의", "위더스골프"];
   const bodyForStore = (() => {
+    const filtered = cleanText
+      .split("\n")
+      .filter((line) => !BODY_BLOCKLIST_TERMS.some((term) => line.includes(term)))
+      .join("\n");
     const cleaned = stripContacts(
-      cleanText
-        .replace(/^[ \t]*문의\s*[:：].*$/gm, "")
-        .replace(/[ \t]+\n/g, "\n")
-        .replace(/\n{3,}/g, "\n\n")
+      filtered.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n")
     ).trim();
     if (!operatorLine) return cleaned;
     return cleaned ? `${cleaned}\n\n담당자 : ${operatorLine}` : `담당자 : ${operatorLine}`;
