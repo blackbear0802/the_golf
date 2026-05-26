@@ -38,6 +38,7 @@ export default async function AdminSettingsPage({
     APP_CONFIG_KEYS.lastCrawlSuccess,
     APP_CONFIG_KEYS.lastCrawlNew,
     APP_CONFIG_KEYS.lastCrawlError,
+    APP_CONFIG_KEYS.bodyBlocklist,
   ]);
 
   const connected = !!cfg.bandAccessToken;
@@ -126,6 +127,9 @@ export default async function AdminSettingsPage({
               email: cfg.operator2Email ?? "",
             },
             crawlEnabled: cfg.crawlEnabled === "true",
+            // null(미설정) → 기본값을 placeholder처럼 보여주기 위해 빈 문자열로 넘김(서버는 미설정으로 인식)
+            bodyBlocklist: cfg.bodyBlocklist ?? "",
+            bodyBlocklistUnset: cfg.bodyBlocklist === null,
           }}
         />
       </div>

@@ -27,6 +27,13 @@
 ## 2차 보정 (사용자 피드백)
 - [x] 캡션 후보에서 URL 제거 — 밴드 이미지 URL이 캡션 가로채던 버그 fix(0973ded)
 
+## 4차 보완 (어드민 UI에서 본문 차단어 관리)
+- [x] `app-config.ts` 에 `bodyBlocklist` 키 추가
+- [x] 빠른등록 라우트 — 하드코딩 상수 대신 `loadBodyBlocklist()`(AppConfig.bodyBlocklist) 로드. null→기본값, ""→차단 없음
+- [x] 어드민 설정 페이지에서 textarea 섹션 추가(미설정 시 기본값 placeholder, 빈 입력 = 차단 없음 안내)
+- [x] 설정 API에서 `bodyBlocklist: string` 수용·정규화(trim/중복제거)·저장
+- [x] 타입 체크 PASS, 로더 단위검증 PASS(8건)
+
 ## 3차 보완 (사용자 피드백 — "캡션 본문 중복 제거 / 위에 표시 / 문의→담당자")
 - [x] 본문에서 캡션 줄 제거 — `QuickProductForm.loadDocx` 에서 captions 모은 뒤 본문 t에서 trim/정규화 일치 줄 필터
 - [x] 상품 상세 페이지 figcaption을 이미지 **위로** 이동(`products/[id]/page.tsx`)

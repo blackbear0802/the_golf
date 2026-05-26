@@ -14,12 +14,15 @@ export type SettingsInitial = {
   operator1: OperatorInitial;
   operator2: OperatorInitial;
   crawlEnabled: boolean;
+  bodyBlocklist: string;
+  bodyBlocklistUnset: boolean;
 };
 
 type FormState = {
   operator1: OperatorInitial;
   operator2: OperatorInitial;
   crawlEnabled: boolean;
+  bodyBlocklist: string;
 };
 
 export default function SettingsForm({ initial }: { initial: SettingsInitial }) {
@@ -28,6 +31,7 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
     operator1: { ...initial.operator1 },
     operator2: { ...initial.operator2 },
     crawlEnabled: initial.crawlEnabled,
+    bodyBlocklist: initial.bodyBlocklist,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -62,6 +66,7 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
         operator1: form.operator1,
         operator2: form.operator2,
         crawlEnabled: form.crawlEnabled,
+        bodyBlocklist: form.bodyBlocklist,
       }),
     });
 
@@ -115,6 +120,26 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
             크롤링 {form.crawlEnabled ? "활성화됨" : "비활성화됨"}
           </span>
         </label>
+      </Section>
+
+      <Section
+        title="빠른등록 본문 차단어"
+        description="줄 단위로 하나씩 입력. 본문 어디든 이 단어가 포함된 줄은 등록 시 통째로 삭제됩니다(예: 공급자명·연락 안내 문구)."
+      >
+        <textarea
+          rows={6}
+          value={form.bodyBlocklist}
+          onChange={(e) => update("bodyBlocklist", e.target.value)}
+          placeholder={
+            initial.bodyBlocklistUnset
+              ? "문의\n위더스골프\n\n(미설정 — 위 기본값이 적용 중. 저장하면 입력한 목록으로 대체됩니다.)"
+              : "문의\n위더스골프"
+          }
+          className="block w-full rounded-xl border-2 border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-warm-500 focus:outline-none font-mono"
+        />
+        <p className="mt-2 text-sm text-neutral-500">
+          비워두고 저장하면 <span className="font-bold">차단 없음</span>. 한 줄에 하나씩, 부분 일치(line.includes).
+        </p>
       </Section>
 
       {error && (

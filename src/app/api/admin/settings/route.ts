@@ -16,6 +16,7 @@ type SettingsPayload = {
   operator2?: OperatorInput;
   bandKey?: string;
   crawlEnabled?: boolean;
+  bodyBlocklist?: string;
 };
 
 function validateOperator(
@@ -79,6 +80,19 @@ export async function PATCH(req: Request) {
 
   if (typeof body.crawlEnabled === "boolean") {
     updates[APP_CONFIG_KEYS.crawlEnabled] = body.crawlEnabled ? "true" : "false";
+  }
+
+  if (typeof body.bodyBlocklist === "string") {
+    // 줄별로 trim·중복·빈줄 제거 후 newline 결합. 빈 문자열 저장은 "차단 없음" 의도로 허용.
+    const normalized = Array.from(
+      new Set(
+        body.bodyBlocklist
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      )
+    ).join("\n");
+    updates[APP_CONFIG_KEYS.bodyBlocklist] = normalized;
   }
 
   await setConfigMany(updates);

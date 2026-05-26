@@ -14,6 +14,16 @@ import {
 import { classifyImage } from "@/lib/media-classifier";
 import { cleanPostText } from "@/lib/clean-post-text";
 import { regionFieldsFor } from "@/lib/regions";
+import { APP_CONFIG_KEYS, getConfig } from "@/lib/app-config";
+
+// 어드민 설정 미적용 상태에서 동작 보장용 기본 차단어 — 어드민이 명시적으로 빈 값을 저장하면 차단 없음
+const DEFAULT_BODY_BLOCKLIST = ["문의", "위더스골프"];
+
+async function loadBodyBlocklist(): Promise<string[]> {
+  const raw = await getConfig(APP_CONFIG_KEYS.bodyBlocklist);
+  if (raw === null) return DEFAULT_BODY_BLOCKLIST;
+  return raw.split("\n").map((s) => s.trim()).filter(Boolean);
+}
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -69,13 +79,15 @@ export async function POST(req: Request) {
 
   // 본문 정제 정책 — 차단어 줄 통째 삭제 → 잔여 공급자 연락처 strip → 끝에 우리 측 담당자 한 줄 append.
   // 표시 단계는 autoImported=false 행의 stripContacts 안전망을 건너뛰므로, 여기서 확실히 정제해 둬야 함.
-  // BODY_BLOCKLIST_TERMS 에 추가하면 그 단어를 포함한 줄은 본문에서 전부 사라짐(예: 공급자명).
-  const BODY_BLOCKLIST_TERMS = ["문의", "위더스골프"];
+  // 차단어는 어드민 설정(AppConfig.bodyBlocklist)에서 관리. 미설정 시 DEFAULT_BODY_BLOCKLIST 사용.
+  const blocklistTerms = await loadBodyBlocklist();
   const bodyForStore = (() => {
-    const filtered = cleanText
-      .split("\n")
-      .filter((line) => !BODY_BLOCKLIST_TERMS.some((term) => line.includes(term)))
-      .join("\n");
+    const filtered = blocklistTerms.length
+      ? cleanText
+          .split("\n")
+          .filter((line) => !blocklistTerms.some((term) => line.includes(term)))
+          .join("\n")
+      : cleanText;
     const cleaned = stripContacts(
       filtered.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n")
     ).trim();

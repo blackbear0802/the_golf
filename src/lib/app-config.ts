@@ -22,6 +22,8 @@ export const APP_CONFIG_KEYS = {
   bandTokenExpiresAt: "bandTokenExpiresAt",
   bandKey: "bandKey",
   bandConnectedAt: "bandConnectedAt",
+  // 빠른등록 본문 차단어(줄 단위 newline 구분). null=미설정→기본값 사용, ""=명시적으로 비움→차단 없음.
+  bodyBlocklist: "bodyBlocklist",
 } as const;
 
 export type AppConfigKey = (typeof APP_CONFIG_KEYS)[keyof typeof APP_CONFIG_KEYS];
