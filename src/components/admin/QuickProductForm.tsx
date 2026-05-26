@@ -32,6 +32,16 @@ function xmlToText(xml: string): string {
 
 const CAPTION_MAX = 80;
 
+// 캡션 후보 정제 — URL/하이퍼링크 필드코드 제거(밴드 이미지 URL이 캡션으로 잡히는 문제 방지)
+function cleanCaptionText(raw: string): string {
+  return raw
+    .replace(/HYPERLINK\s+"[^"]*"(\s*\\\*\s*MERGEFORMAT)?/gi, " ")
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/www\.\S+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 type DocxImage = { fileName: string; zipPath: string; caption: string };
 
 // document.xml 을 문서 순서로 훑어 이미지마다 바로 위 문단 텍스트를 캡션으로 페어링
@@ -45,7 +55,8 @@ function pairImagesWithCaptions(
 
   for (const pm of docXml.matchAll(/<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g)) {
     const inner = pm[1];
-    const text = xmlToText(inner).replace(/\s+/g, " ").trim();
+    // URL 줄은 캡션 후보에서 제거 → URL만 있던 문단은 빈 텍스트라 블록에서 빠짐
+    const text = cleanCaptionText(xmlToText(inner));
     if (text) blocks.push({ kind: "text", text });
     // 문단 내 이미지 참조(DrawingML r:embed / VML r:id) — media 이미지로 매핑되는 것만
     for (const im of inner.matchAll(/r:(?:embed|id)="([^"]+)"/g)) {
