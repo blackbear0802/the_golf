@@ -24,6 +24,14 @@
   --font-sans: var(--font-noto-sans-kr), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
+html,
+body {
+  /* 햄버거 슬라이드 메뉴(translate-x-full로 화면 밖에 자리)가 일부 브라우저에서
+     문서 scrollWidth에 포함돼 모바일 가로 스크롤이 생기는 문제 방지.
+     html·body 둘 다 적용해야 scrollWidth가 viewport에 fit. */
+  overflow-x: hidden;
+}
+
 html {
   font-size: 17px;
 }
@@ -34,7 +42,4 @@ body {
   font-family: var(--font-sans);
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
-  /* 햄버거 슬라이드 메뉴(translate-x-full로 화면 밖에 자리)가 일부 브라우저에서
-     문서 scrollWidth에 포함돼 모바일 가로 스크롤이 생기는 문제 방지. */
-  overflow-x: hidden;
 }
