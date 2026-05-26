@@ -22,4 +22,14 @@
 ## 검증
 - [x] `npx tsc --noEmit` 타입 통과(EXIT 0) · eslint 통과(EXIT 0)
 - [x] 합성 Word XML로 캡션 페어링 단위검증 PASS(인라인/빈문단/갤러리/하이퍼링크 케이스)
-- [ ] 등록 후 수정화면(MediaManager)에서 캡션 표시 확인 — 라이브 수동 확인 권장
+- [x] 라이브 .docx 1차 테스트 통과(사용자 확인)
+
+## 2차 보정 (사용자 피드백)
+- [x] 캡션 후보에서 URL 제거 — 밴드 이미지 URL이 캡션 가로채던 버그 fix(0973ded)
+
+## 3차 보완 (사용자 피드백 — "캡션 본문 중복 제거 / 위에 표시 / 문의→담당자")
+- [x] 본문에서 캡션 줄 제거 — `QuickProductForm.loadDocx` 에서 captions 모은 뒤 본문 t에서 trim/정규화 일치 줄 필터
+- [x] 상품 상세 페이지 figcaption을 이미지 **위로** 이동(`products/[id]/page.tsx`)
+- [x] 빠른등록 API에서 본문 `^[ \t]*문의\s*[:：].*$` 줄 제거 + stripContacts + 끝에 `담당자 : {operatorLine}` append
+- [x] 상품 상세 본문 표시 — `autoImported=false`(빠른등록) 행은 표시 단계 stripContacts 건너뜀(쓰기 시 이미 정제·담당자 정보 보존)
+- [x] 타입 체크 PASS, 3건 합성 단위검증 PASS

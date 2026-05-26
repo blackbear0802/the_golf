@@ -128,8 +128,13 @@ export default async function ProductDetailPage({
     .slice()
     .sort((a, b) => a.order - b.order);
   const youtubeVideos = product.media.filter((m) => m.type === "youtube");
+  // 빠른등록(autoImported=false)은 쓰기 시점에 본문이 이미 정제됐고 담당자 정보를 의도적으로 포함하므로
+  // 표시 단계의 stripContacts(안전망)를 건너뛴다. 밴드 크롤(autoImported=true) 본문은 그대로 안전망 적용.
   const bodyText = product.rawText
-    ? stripContacts(cleanPostText(product.rawText)).trim()
+    ? (product.autoImported
+        ? stripContacts(cleanPostText(product.rawText))
+        : cleanPostText(product.rawText)
+      ).trim()
     : "";
 
   return (
@@ -200,6 +205,11 @@ export default async function ProductDetailPage({
             <div className="mx-auto max-w-4xl space-y-5">
               {orderedImages.map((img) => (
                 <figure key={img.id}>
+                  {img.caption && (
+                    <figcaption className="mb-2 text-base font-medium text-neutral-700">
+                      {img.caption}
+                    </figcaption>
+                  )}
                   <div className="overflow-hidden rounded-2xl bg-neutral-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -208,11 +218,6 @@ export default async function ProductDetailPage({
                       className="w-full"
                     />
                   </div>
-                  {img.caption && (
-                    <figcaption className="mt-2 text-base text-neutral-600">
-                      {img.caption}
-                    </figcaption>
-                  )}
                 </figure>
               ))}
             </div>

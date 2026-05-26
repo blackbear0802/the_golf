@@ -121,7 +121,7 @@ export default function QuickProductForm() {
         }
       }
 
-      const t = cleanPostText(
+      const rawBody = cleanPostText(
         xmlToText(
           docXml.replace(/<\/w:p>/g, "\n").replace(/<\/w:tr>/g, "\n")
         )
@@ -129,6 +129,22 @@ export default function QuickProductForm() {
 
       // 문서 순서로 이미지+캡션 페어링
       const paired = pairImagesWithCaptions(docXml, relMap);
+
+      // 캡션으로 쓰인 줄은 본문에서 제거(중복 노출 방지) — trim 일치 또는 캡션 정규화 일치
+      const captionSet = new Set(paired.map((p) => p.caption).filter(Boolean));
+      const t = captionSet.size
+        ? rawBody
+            .split("\n")
+            .filter((line) => {
+              const trimmed = line.trim();
+              if (!trimmed) return true;
+              return !captionSet.has(trimmed) && !captionSet.has(cleanCaptionText(line));
+            })
+            .join("\n")
+            .replace(/[ \t]+\n/g, "\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim()
+        : rawBody;
       const usedPaths = new Set(paired.map((p) => p.zipPath));
       // 본문에서 미참조된 임베드 이미지는 캡션 없이 뒤에 추가(기존 전부 포함 동작 보존)
       const leftover = Object.keys(zip.files).filter(

@@ -67,6 +67,19 @@ export async function POST(req: Request) {
   ];
   const excludedFinal = stripContactsFromArray(parsed.excluded);
 
+  // 본문에서 '문의:'/'문의 :' 시작 줄 제거 → 잔여 공급자 연락처 strip → 끝에 우리 측 담당자 한 줄 append.
+  // 표시 단계는 autoImported=false 행의 stripContacts 안전망을 건너뛰므로, 여기서 확실히 정제해 둬야 함.
+  const bodyForStore = (() => {
+    const cleaned = stripContacts(
+      cleanText
+        .replace(/^[ \t]*문의\s*[:：].*$/gm, "")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+    ).trim();
+    if (!operatorLine) return cleaned;
+    return cleaned ? `${cleaned}\n\n담당자 : ${operatorLine}` : `담당자 : ${operatorLine}`;
+  })();
+
   const region = regionFieldsFor(parsed.destination);
   if (!region.regionCode) {
     console.warn(
@@ -91,7 +104,7 @@ export async function POST(req: Request) {
       included: includedFinal,
       excluded: excludedFinal,
       sourceUrl: null,
-      rawText: cleanText,
+      rawText: bodyForStore,
       autoImported: false,
     },
   });
