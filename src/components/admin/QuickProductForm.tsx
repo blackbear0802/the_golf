@@ -15,10 +15,66 @@ const IMG_MIME: Record<string, string> = {
   webp: "image/webp",
 };
 
+// XML 조각을 평문으로 — 태그 제거 + 엔티티 복원
+function xmlToText(xml: string): string {
+  return xml
+    .replace(/<w:tab\s*\/>/g, "\t")
+    .replace(/<w:br\s*\/>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, c) => String.fromCodePoint(parseInt(c, 16)))
+    .replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(parseInt(c, 10)))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+const CAPTION_MAX = 80;
+
+type DocxImage = { fileName: string; zipPath: string; caption: string };
+
+// document.xml 을 문서 순서로 훑어 이미지마다 바로 위 문단 텍스트를 캡션으로 페어링
+function pairImagesWithCaptions(
+  docXml: string,
+  relMap: Record<string, string>
+): DocxImage[] {
+  // 본문을 (텍스트 | 이미지) 블록으로 순서대로 분해
+  type Block = { kind: "text"; text: string } | { kind: "image"; rId: string };
+  const blocks: Block[] = [];
+
+  for (const pm of docXml.matchAll(/<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g)) {
+    const inner = pm[1];
+    const text = xmlToText(inner).replace(/\s+/g, " ").trim();
+    if (text) blocks.push({ kind: "text", text });
+    // 문단 내 이미지 참조(DrawingML r:embed / VML r:id) — media 이미지로 매핑되는 것만
+    for (const im of inner.matchAll(/r:(?:embed|id)="([^"]+)"/g)) {
+      const rId = im[1];
+      if (relMap[rId]) blocks.push({ kind: "image", rId });
+    }
+  }
+
+  const imgs: DocxImage[] = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    if (b.kind !== "image") continue;
+    const prev = blocks[i - 1];
+    let caption = "";
+    if (prev && prev.kind === "text" && prev.text.length <= CAPTION_MAX) {
+      caption = prev.text;
+    }
+    const zipPath = relMap[b.rId];
+    imgs.push({ fileName: zipPath.split("/").pop()!, zipPath, caption });
+  }
+  return imgs;
+}
+
+type FormImage = { file: File; caption: string };
+
 export default function QuickProductForm() {
   const router = useRouter();
   const [text, setText] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<FormImage[]>([]);
   const [youtube, setYoutube] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
@@ -39,38 +95,62 @@ export default function QuickProductForm() {
         setError(".docx 문서를 읽을 수 없습니다 (형식 확인).");
         return;
       }
-      const t = cleanPostText(
-        docXml
-          .replace(/<\/w:p>/g, "\n")
-          .replace(/<w:tab\s*\/>/g, "\t")
-          .replace(/<w:br\s*\/>/g, "\n")
-          .replace(/<[^>]+>/g, "")
-          .replace(/&#x([0-9a-fA-F]+);/g, (_, c) =>
-            String.fromCodePoint(parseInt(c, 16))
-          )
-          .replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(parseInt(c, 10)))
-          .replace(/&amp;/g, "&")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-      );
-      const names = Object.keys(zip.files).filter((n) =>
-        /^word\/media\/.+\.(jpe?g|png|gif|webp)$/i.test(n)
-      );
-      const imgs: File[] = [];
-      for (const name of names) {
-        const ext = name.split(".").pop()!.toLowerCase();
-        const blob = await zip.files[name].async("blob");
-        imgs.push(
-          new File([blob], name.split("/").pop()!, {
-            type: IMG_MIME[ext] ?? "image/jpeg",
-          })
-        );
+
+      // rId → media 파일경로 맵 (이미지 확장자만)
+      const relsXml =
+        (await zip.file("word/_rels/document.xml.rels")?.async("string")) ?? "";
+      const relMap: Record<string, string> = {};
+      for (const rm of relsXml.matchAll(
+        /<Relationship\b[^>]*\bId="([^"]+)"[^>]*\bTarget="([^"]+)"[^>]*>/g
+      )) {
+        const [, id, target] = rm;
+        const path = `word/${target.replace(/^(\.\.\/|\/)/, "")}`;
+        if (/^word\/media\/.+\.(jpe?g|png|gif|webp)$/i.test(path)) {
+          relMap[id] = path;
+        }
       }
+
+      const t = cleanPostText(
+        xmlToText(
+          docXml.replace(/<\/w:p>/g, "\n").replace(/<\/w:tr>/g, "\n")
+        )
+      );
+
+      // 문서 순서로 이미지+캡션 페어링
+      const paired = pairImagesWithCaptions(docXml, relMap);
+      const usedPaths = new Set(paired.map((p) => p.zipPath));
+      // 본문에서 미참조된 임베드 이미지는 캡션 없이 뒤에 추가(기존 전부 포함 동작 보존)
+      const leftover = Object.keys(zip.files).filter(
+        (n) =>
+          /^word\/media\/.+\.(jpe?g|png|gif|webp)$/i.test(n) && !usedPaths.has(n)
+      );
+
+      const imgs: FormImage[] = [];
+      let captioned = 0;
+      for (const entry of [
+        ...paired,
+        ...leftover.map((zipPath) => ({
+          zipPath,
+          fileName: zipPath.split("/").pop()!,
+          caption: "",
+        })),
+      ]) {
+        const ext = entry.fileName.split(".").pop()!.toLowerCase();
+        const blob = await zip.files[entry.zipPath].async("blob");
+        imgs.push({
+          file: new File([blob], entry.fileName, {
+            type: IMG_MIME[ext] ?? "image/jpeg",
+          }),
+          caption: entry.caption,
+        });
+        if (entry.caption) captioned++;
+      }
+
       if (t) setText(t);
       if (imgs.length) setFiles((prev) => [...prev, ...imgs]);
-      setDocxNote(`Word에서 불러옴 — 본문 ${t.length}자 · 이미지 ${imgs.length}장`);
+      setDocxNote(
+        `Word에서 불러옴 — 본문 ${t.length}자 · 이미지 ${imgs.length}장 (캡션 ${captioned}개 자동 인식)`
+      );
     } catch {
       setDocxNote("");
       setError("Word 파일 분석 실패.");
@@ -79,7 +159,9 @@ export default function QuickProductForm() {
 
   function addFiles(list: FileList | null) {
     if (!list) return;
-    const imgs = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    const imgs = Array.from(list)
+      .filter((f) => f.type.startsWith("image/"))
+      .map((file) => ({ file, caption: "" }));
     setFiles((prev) => [...prev, ...imgs]);
     if (error) setError("");
   }
@@ -97,10 +179,10 @@ export default function QuickProductForm() {
     }
     setBusy(true);
 
-    const imageUrls: string[] = [];
+    const images: { url: string; caption: string }[] = [];
     const failed: string[] = [];
     for (let i = 0; i < files.length; i++) {
-      const f = files[i];
+      const { file: f, caption } = files[i];
       setStatus(`이미지 업로드 ${i + 1}/${files.length} …`);
       try {
         const res = await upload(f.name, f, {
@@ -108,7 +190,7 @@ export default function QuickProductForm() {
           handleUploadUrl: "/api/admin/blob-upload",
           contentType: f.type,
         });
-        imageUrls.push(res.url);
+        images.push({ url: res.url, caption });
       } catch {
         failed.push(f.name);
       }
@@ -123,7 +205,7 @@ export default function QuickProductForm() {
     const res = await fetch("/api/admin/products/quick", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: text.trim(), imageUrls, youtubeUrls }),
+      body: JSON.stringify({ text: text.trim(), images, youtubeUrls }),
     });
 
     if (!res.ok) {
@@ -227,7 +309,7 @@ export default function QuickProductForm() {
 
         {files.length > 0 && (
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-            {files.map((f, i) => (
+            {files.map(({ file: f, caption }, i) => (
               <div
                 key={`${f.name}-${i}`}
                 className="group relative aspect-square overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100"
@@ -238,6 +320,14 @@ export default function QuickProductForm() {
                   alt={f.name}
                   className="h-full w-full object-cover"
                 />
+                {caption && (
+                  <p
+                    className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[11px] font-medium text-white"
+                    title={caption}
+                  >
+                    {caption}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => removeFile(i)}

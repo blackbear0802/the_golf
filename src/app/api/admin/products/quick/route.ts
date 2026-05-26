@@ -23,9 +23,22 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const text = typeof body.text === "string" ? body.text.trim() : "";
-  const imageUrls: string[] = Array.isArray(body.imageUrls)
-    ? body.imageUrls.filter((u: unknown): u is string => typeof u === "string" && !!u)
-    : [];
+  // 신형: images[{url, caption}] / 레거시: imageUrls[string] 폴백
+  const images: { url: string; caption: string }[] = Array.isArray(body.images)
+    ? body.images
+        .filter(
+          (m: unknown): m is { url: string; caption?: unknown } =>
+            !!m && typeof (m as { url?: unknown }).url === "string" && !!(m as { url: string }).url
+        )
+        .map((m: { url: string; caption?: unknown }) => ({
+          url: m.url,
+          caption: typeof m.caption === "string" ? m.caption : "",
+        }))
+    : Array.isArray(body.imageUrls)
+      ? body.imageUrls
+          .filter((u: unknown): u is string => typeof u === "string" && !!u)
+          .map((url: string) => ({ url, caption: "" }))
+      : [];
   const youtubeUrls: string[] = Array.isArray(body.youtubeUrls)
     ? body.youtubeUrls
         .filter((u: unknown): u is string => typeof u === "string" && !!u.trim())
@@ -87,19 +100,25 @@ export async function POST(req: Request) {
     productId: string;
     type: "golf" | "accommodation" | "dining" | "youtube";
     url: string;
+    caption: string | null;
     order: number;
   }> = [
-    ...imageUrls.map((url, i) => ({
-      productId: created.id,
-      type: classifyImage(url, null, text),
-      url,
-      order: i,
-    })),
+    ...images.map(({ url, caption }, i) => {
+      const cleanCaption = stripContacts(caption).trim();
+      return {
+        productId: created.id,
+        type: classifyImage(url, cleanCaption || null, text),
+        url,
+        caption: cleanCaption || null,
+        order: i,
+      };
+    }),
     ...youtubeUrls.map((url, i) => ({
       productId: created.id,
       type: "youtube" as const,
       url,
-      order: imageUrls.length + i,
+      caption: null,
+      order: images.length + i,
     })),
   ];
   if (mediaRows.length > 0) {
