@@ -16,15 +16,21 @@ import {
 } from "@/lib/band-api-client";
 import { refreshAccessToken, BandOAuthError } from "@/lib/band-oauth";
 import { parseProduct } from "@/lib/claude-parser";
-import {
-  loadOperators,
-  stripContacts,
-  stripContactsFromArray,
-  formatOperatorLine,
-} from "@/lib/contact-replacer";
+import { stripContacts, stripContactsFromArray } from "@/lib/contact-replacer";
+import { cleanPostText } from "@/lib/clean-post-text";
 import { storeFromUrl } from "@/lib/media-storage";
 import { classifyImage } from "@/lib/media-classifier";
 import { regionFieldsFor } from "@/lib/regions";
+
+// 빠른등록과 동일한 기본 차단어. 어드민 설정(bodyBlocklist) 미설정 시 사용.
+const DEFAULT_BODY_BLOCKLIST = ["담당자", "문의하기", "문의", "위더스골프"];
+
+async function loadBodyBlocklist(): Promise<string[]> {
+  const raw = await getConfigMany([APP_CONFIG_KEYS.bodyBlocklist]);
+  const v = raw[APP_CONFIG_KEYS.bodyBlocklist];
+  if (v === null) return DEFAULT_BODY_BLOCKLIST;
+  return v.split("\n").map((s) => s.trim()).filter(Boolean);
+}
 
 const MAX_POSTS_PER_RUN = 5;
 const MAX_IMAGES_PER_POST = 20;
@@ -90,8 +96,7 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
       .filter((p) => p.postKey && !seenIds.has(p.postKey))
       .slice(0, MAX_POSTS_PER_RUN);
 
-    const operators = await loadOperators();
-    const operatorLine = formatOperatorLine(operators);
+    const blocklistTerms = await loadBodyBlocklist();
 
     let imported = 0;
     let skipped = 0;
@@ -120,7 +125,8 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
           },
         });
 
-        const cleanedForLLM = stripContacts(detail.content);
+        // 빠른등록과 동일한 LLM 입력 정제: cleanPostText(HYPERLINK/band.us 잔재 제거) → stripContacts.
+        const cleanedForLLM = stripContacts(cleanPostText(detail.content));
         if (!cleanedForLLM) {
           skipped++;
           await markCrawled(sourceUrl, "failed");
@@ -136,10 +142,8 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
           continue;
         }
 
-        const includedFinal = [
-          ...stripContactsFromArray(parsed.included),
-          ...(operatorLine ? [`담당: ${operatorLine}`] : []),
-        ];
+        // 담당자/연락처는 본문·included에서 노출하지 않는다(예약 화면에서만 표시).
+        const includedFinal = stripContactsFromArray(parsed.included);
         const excludedFinal = stripContactsFromArray(parsed.excluded);
 
         const region = regionFieldsFor(parsed.destination);
@@ -148,6 +152,20 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
             `[regions] 크롤 destination 미매핑 — 매트릭스 비노출: "${parsed.destination}" (post ${post.postKey})`
           );
         }
+
+        // 본문 정제 — 빠른등록과 동일한 정책: cleanPostText → 차단어 줄 제거 → stripContacts.
+        const cleanText = cleanPostText(detail.content);
+        const rawTextForStore = (() => {
+          const filtered = blocklistTerms.length
+            ? cleanText
+                .split("\n")
+                .filter((line) => !blocklistTerms.some((term) => line.includes(term)))
+                .join("\n")
+            : cleanText;
+          return stripContacts(
+            filtered.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n")
+          ).trim();
+        })();
 
         const created = await prisma.product.create({
           data: {
@@ -166,7 +184,7 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
             included: includedFinal,
             excluded: excludedFinal,
             sourceUrl,
-            rawText: detail.content,
+            rawText: rawTextForStore,
             autoImported: true,
             bandPostId: post.postKey,
           },
