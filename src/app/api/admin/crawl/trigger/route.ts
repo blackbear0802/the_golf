@@ -17,10 +17,12 @@ export async function POST() {
     const result = await runBandCrawl(new Date());
 
     if ("skipped" in result) {
-      const reason =
+      const baseReason =
         result.skipped === "disabled"
           ? "크롤링이 비활성 상태입니다. 활성화 후 다시 시도하세요."
           : "밴드 연결이 되어있지 않거나 대상 밴드가 선택되지 않았습니다.";
+      const diag = "diag" in result ? result.diag : undefined;
+      const reason = diag ? `${baseReason} [${diag}]` : baseReason;
       return NextResponse.json({ ok: false, skipped: result.skipped, reason }, { status: 200 });
     }
 

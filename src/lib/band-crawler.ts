@@ -38,7 +38,7 @@ const MAX_VIDEOS_PER_POST = 5;
 
 export type BandCrawlSkipped =
   | { skipped: "disabled" }
-  | { skipped: "missing_credentials" };
+  | { skipped: "missing_credentials"; diag?: string };
 
 export type BandCrawlSuccess = {
   ok: true;
@@ -73,8 +73,11 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
       return { skipped: "disabled" };
     }
     if (!cfg.bandAccessToken || !cfg.bandKey) {
-      await recordFailure(startedAt, "밴드 연결이 되어있지 않거나 대상 밴드가 선택되지 않았습니다.");
-      return { skipped: "missing_credentials" };
+      const tokenLen = cfg.bandAccessToken?.length ?? -1;
+      const keyLen = cfg.bandKey?.length ?? -1;
+      const diag = `missing_credentials [tokenLen=${tokenLen} keyLen=${keyLen}]`;
+      await recordFailure(startedAt, diag);
+      return { skipped: "missing_credentials", diag };
     }
 
     const state: TokenState = {
