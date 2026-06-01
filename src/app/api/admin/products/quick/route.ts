@@ -5,19 +5,30 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseProduct } from "@/lib/claude-parser";
-import {
-  loadOperators,
-  stripContacts,
-  stripContactsFromArray,
-  formatOperatorLine,
-} from "@/lib/contact-replacer";
+import { stripContacts, stripContactsFromArray } from "@/lib/contact-replacer";
 import { classifyImage } from "@/lib/media-classifier";
 import { cleanPostText } from "@/lib/clean-post-text";
 import { regionFieldsFor } from "@/lib/regions";
 import { APP_CONFIG_KEYS, getConfig } from "@/lib/app-config";
 
+// BAND 게시글 URL → { bandKey, postKey } 추출. 자동크롤 dedup용.
+function parseBandPostUrl(
+  url: string | undefined | null
+): { bandKey: string; postKey: string; canonicalUrl: string } | null {
+  if (!url) return null;
+  const m = url.match(/band\.us\/band\/([^/?#]+)\/post\/([^/?#]+)/i);
+  if (!m) return null;
+  const [, bandKey, postKey] = m;
+  return {
+    bandKey,
+    postKey,
+    canonicalUrl: `https://band.us/band/${bandKey}/post/${postKey}`,
+  };
+}
+
 // 어드민 설정 미적용 상태에서 동작 보장용 기본 차단어 — 어드민이 명시적으로 빈 값을 저장하면 차단 없음
-const DEFAULT_BODY_BLOCKLIST = ["문의", "위더스골프"];
+// "담당자/문의/문의하기"가 들어간 줄은 본문에서 통째로 제거(연락처는 예약 화면에서만 노출).
+const DEFAULT_BODY_BLOCKLIST = ["담당자", "문의하기", "문의", "위더스골프"];
 
 async function loadBodyBlocklist(): Promise<string[]> {
   const raw = await getConfig(APP_CONFIG_KEYS.bodyBlocklist);
@@ -54,9 +65,33 @@ export async function POST(req: Request) {
         .filter((u: unknown): u is string => typeof u === "string" && !!u.trim())
         .map((u: string) => u.trim())
     : [];
+  const bandPostUrlInput =
+    typeof body.bandPostUrl === "string" ? body.bandPostUrl.trim() : "";
 
   if (!text) {
     return NextResponse.json({ error: "본문을 입력해주세요." }, { status: 400 });
+  }
+
+  // BAND URL 형식 검증 — 입력은 있는데 형식이 안 맞으면 즉시 에러로 알림.
+  const bandParsed = parseBandPostUrl(bandPostUrlInput);
+  if (bandPostUrlInput && !bandParsed) {
+    return NextResponse.json(
+      { error: "BAND 게시글 URL 형식이 올바르지 않습니다. 예: https://band.us/band/12345/post/67890" },
+      { status: 400 }
+    );
+  }
+  // 이미 같은 BAND 게시글이 등록돼있으면 중복 거부.
+  if (bandParsed) {
+    const exists = await prisma.product.findUnique({
+      where: { bandPostId: bandParsed.postKey },
+      select: { id: true },
+    });
+    if (exists) {
+      return NextResponse.json(
+        { error: `이미 등록된 BAND 게시글입니다. (상품 ID: ${exists.id})` },
+        { status: 409 }
+      );
+    }
   }
 
   const cleanText = cleanPostText(text);
@@ -69,16 +104,11 @@ export async function POST(req: Request) {
     );
   }
 
-  const operators = await loadOperators();
-  const operatorLine = formatOperatorLine(operators);
-  const includedFinal = [
-    ...stripContactsFromArray(parsed.included),
-    ...(operatorLine ? [`담당: ${operatorLine}`] : []),
-  ];
+  // 담당자/연락처는 본문·included에서 노출하지 않는다(예약 화면에서만 표시).
+  const includedFinal = stripContactsFromArray(parsed.included);
   const excludedFinal = stripContactsFromArray(parsed.excluded);
 
-  // 본문 정제 정책 — 차단어 줄 통째 삭제 → 잔여 공급자 연락처 strip → 끝에 우리 측 담당자 한 줄 append.
-  // 표시 단계는 autoImported=false 행의 stripContacts 안전망을 건너뛰므로, 여기서 확실히 정제해 둬야 함.
+  // 본문 정제 정책 — 차단어 줄 통째 삭제 → 잔여 공급자 연락처 strip. 우리 측 담당자 라인은 append하지 않는다.
   // 차단어는 어드민 설정(AppConfig.bodyBlocklist)에서 관리. 미설정 시 DEFAULT_BODY_BLOCKLIST 사용.
   const blocklistTerms = await loadBodyBlocklist();
   const bodyForStore = (() => {
@@ -88,11 +118,9 @@ export async function POST(req: Request) {
           .filter((line) => !blocklistTerms.some((term) => line.includes(term)))
           .join("\n")
       : cleanText;
-    const cleaned = stripContacts(
+    return stripContacts(
       filtered.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n")
     ).trim();
-    if (!operatorLine) return cleaned;
-    return cleaned ? `${cleaned}\n\n담당자 : ${operatorLine}` : `담당자 : ${operatorLine}`;
   })();
 
   const region = regionFieldsFor(parsed.destination);
@@ -118,9 +146,10 @@ export async function POST(req: Request) {
         : null,
       included: includedFinal,
       excluded: excludedFinal,
-      sourceUrl: null,
+      sourceUrl: bandParsed?.canonicalUrl ?? null,
       rawText: bodyForStore,
       autoImported: false,
+      bandPostId: bandParsed?.postKey ?? null,
     },
   });
 

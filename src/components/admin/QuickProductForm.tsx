@@ -87,6 +87,7 @@ export default function QuickProductForm() {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<FormImage[]>([]);
   const [youtube, setYoutube] = useState("");
+  const [bandPostUrl, setBandPostUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -232,7 +233,12 @@ export default function QuickProductForm() {
     const res = await fetch("/api/admin/products/quick", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: text.trim(), images, youtubeUrls }),
+      body: JSON.stringify({
+        text: text.trim(),
+        images,
+        youtubeUrls,
+        bandPostUrl: bandPostUrl.trim() || undefined,
+      }),
     });
 
     if (!res.ok) {
@@ -369,6 +375,23 @@ export default function QuickProductForm() {
         {files.length > 0 && (
           <p className="mt-2 text-sm text-neutral-500">{files.length}장 선택됨</p>
         )}
+      </div>
+
+      <div>
+        <label htmlFor="qbandurl" className="block text-base font-bold text-neutral-800">
+          BAND 게시글 URL (선택)
+        </label>
+        <p className="mt-1 text-sm text-neutral-500">
+          이 글이 BAND에 올라온 글이면 URL을 붙여주세요. 자동 크롤이 같은 글을 다시 등록하지 않도록 합니다.
+        </p>
+        <input
+          id="qbandurl"
+          type="url"
+          value={bandPostUrl}
+          onChange={(e) => setBandPostUrl(e.target.value)}
+          placeholder="https://band.us/band/.../post/..."
+          className="mt-2 block h-12 w-full rounded-xl border-2 border-neutral-200 bg-white px-4 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-warm-500 focus:outline-none"
+        />
       </div>
 
       <div>
