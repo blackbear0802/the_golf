@@ -15,6 +15,21 @@ export function cleanPostText(input: string | null | undefined): string {
   // 실제 이미지·동영상은 API의 photos/videos 배열로 별도 전달되므로 본문에선 제거.
   t = t.replace(/<band:[a-z]+\b[^>]*\/?>(?:<\/band:[a-z]+>)?/gi, "");
 
+  // HTML 엔티티 디코드 — BAND가 본문 안 특수문자를 &lt; &gt; &amp; 등으로 인코딩해서 줌.
+  // React는 텍스트 노드에서 이걸 자동 디코드 안 하므로 사전 디코드 필요.
+  // 순서: &amp;를 마지막에 둬서 &amp;lt; → &lt; → < 같은 이중 디코드 막음.
+  t = t
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
+
+  // 디코드 후 드러나는 섹션 마커 태그 — <REMARK>, <NOTICE> 같이 모두 대문자(밑줄 허용) 형태만.
+  // 일반 HTML 태그(소문자 등)는 건드리지 않음.
+  t = t.replace(/<\/?[A-Z][A-Z_]+>/g, "");
+
   // 빈 줄 정리: 3줄 이상 연속 개행 → 2줄
   t = t.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
 
