@@ -32,13 +32,19 @@ export type BandPostItem = {
   photoUrls: string[];
 };
 
+export type BandPhoto = {
+  url: string;
+  // 본문에서 이 사진 바로 앞 짧은 줄이 캡션 후보로 추출되면 채워짐
+  caption: string;
+};
+
 export type BandPostFull = {
   postKey: string;
   bandKey: string;
   content: string;
   createdAt?: number;
   authorName?: string;
-  photoUrls: string[];
+  photos: BandPhoto[];
   // 본문이나 첨부에서 추출한 유튜브 URL
   youtubeUrls: string[];
 };
@@ -146,22 +152,29 @@ export async function fetchPostDetail(
       if (typeof url === "string" && url) photoMap[id] = url;
     }
   }
-  const orderedUrls: string[] = [];
-  const seen = new Set<string>();
-  for (const m of content.matchAll(
-    /<band:attachment\s+type="photo"\s+id="(\d+)"\s*\/?>/gi
-  )) {
+
+  const photos: BandPhoto[] = [];
+  const seenUrl = new Set<string>();
+  // 본문을 attachment 태그로 잘라 각 사진 바로 앞 텍스트를 캡션 후보로 추출.
+  // 캡션 조건: 텍스트 토막이 너무 길지 않고(<=160자) 줄 수가 적을 때 마지막 줄을 채택.
+  // 게시글이 본문 따로 + 사진 끝에 몰아둔 패턴이면 본문이 캡션으로 잘못 잡히지 않게 길이 제한 둠.
+  const PHOTO_TAG_RE = /<band:attachment\s+type="photo"\s+id="(\d+)"\s*\/?>/gi;
+  let lastEnd = 0;
+  for (const m of content.matchAll(PHOTO_TAG_RE)) {
     const url = photoMap[m[1]];
-    if (url && !seen.has(url)) {
-      orderedUrls.push(url);
-      seen.add(url);
+    const idx = m.index ?? 0;
+    if (url && !seenUrl.has(url)) {
+      const textBefore = content.slice(lastEnd, idx);
+      photos.push({ url, caption: extractCaptionCandidate(textBefore) });
+      seenUrl.add(url);
     }
+    lastEnd = idx + m[0].length;
   }
-  // 본문에서 미참조된 사진은 뒤에 보존
+  // 본문에서 미참조된 사진은 캡션 없이 뒤에 보존
   for (const url of Object.values(photoMap)) {
-    if (!seen.has(url)) {
-      orderedUrls.push(url);
-      seen.add(url);
+    if (!seenUrl.has(url)) {
+      photos.push({ url, caption: "" });
+      seenUrl.add(url);
     }
   }
 
@@ -171,9 +184,24 @@ export async function fetchPostDetail(
     content,
     createdAt: typeof p.created_at === "number" ? p.created_at : undefined,
     authorName: typeof author === "string" ? author : undefined,
-    photoUrls: orderedUrls,
+    photos,
     youtubeUrls: extractYoutubeUrls(content),
   };
+}
+
+const CAPTION_MAX = 80;
+const CAPTION_SEGMENT_MAX = 160; // 토막 전체 길이 한계
+
+function extractCaptionCandidate(textBefore: string): string {
+  const trimmed = textBefore.trim();
+  if (!trimmed) return "";
+  // 토막이 너무 길면 본문 paragraph로 보고 캡션 아님.
+  if (trimmed.length > CAPTION_SEGMENT_MAX) return "";
+  const lines = trimmed.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0 || lines.length > 2) return "";
+  const last = lines[lines.length - 1];
+  if (last.length > CAPTION_MAX) return "";
+  return last;
 }
 
 function extractYoutubeUrls(text: string): string[] {

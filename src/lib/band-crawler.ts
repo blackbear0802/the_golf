@@ -156,17 +156,30 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
           );
         }
 
-        // 본문 정제 — 빠른등록과 동일한 정책: cleanPostText → 차단어 줄 제거 → stripContacts.
+        // 본문 정제 — 빠른등록과 동일한 정책: cleanPostText → 차단어 줄 제거 → 캡션 줄 제거 → stripContacts.
+        // 캡션으로 잡힌 줄은 이미지 위에 표시될 거라 본문에서 빼서 중복 노출 방지.
         const cleanText = cleanPostText(detail.content);
+        const captionSet = new Set(
+          detail.photos
+            .slice(0, MAX_IMAGES_PER_POST)
+            .map((p) => p.caption.trim())
+            .filter(Boolean)
+        );
         const rawTextForStore = (() => {
-          const filtered = blocklistTerms.length
+          const filteredByBlocklist = blocklistTerms.length
             ? cleanText
                 .split("\n")
                 .filter((line) => !blocklistTerms.some((term) => line.includes(term)))
                 .join("\n")
             : cleanText;
+          const filteredByCaption = captionSet.size
+            ? filteredByBlocklist
+                .split("\n")
+                .filter((line) => !captionSet.has(line.trim()))
+                .join("\n")
+            : filteredByBlocklist;
           return stripContacts(
-            filtered.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n")
+            filteredByCaption.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n")
           ).trim();
         })();
 
@@ -197,15 +210,22 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
           productId: string;
           type: "golf" | "accommodation" | "dining" | "youtube";
           url: string;
+          caption: string | null;
           order: number;
         }> = [];
 
-        const imageUrls = detail.photoUrls.slice(0, MAX_IMAGES_PER_POST);
-        for (let i = 0; i < imageUrls.length; i++) {
-          const url = imageUrls[i];
+        const photoEntries = detail.photos.slice(0, MAX_IMAGES_PER_POST);
+        for (let i = 0; i < photoEntries.length; i++) {
+          const { url, caption } = photoEntries[i];
           const stored = await storeFromUrl(url);
-          const cat = classifyImage(url, null, detail.content);
-          mediaRows.push({ productId: created.id, type: cat, url: stored, order: i });
+          const cat = classifyImage(url, caption || null, detail.content);
+          mediaRows.push({
+            productId: created.id,
+            type: cat,
+            url: stored,
+            caption: caption ? caption : null,
+            order: i,
+          });
         }
 
         const videoUrls = detail.youtubeUrls.slice(0, MAX_VIDEOS_PER_POST);
@@ -214,6 +234,7 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
             productId: created.id,
             type: "youtube",
             url: videoUrls[i],
+            caption: null,
             order: i,
           });
         }
