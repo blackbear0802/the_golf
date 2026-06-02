@@ -38,7 +38,7 @@ const SYSTEM_PROMPT = `당신은 한국어 골프 투어 상품 게시글에서 
 1. 정보가 본문에 명시되지 않으면 number는 0, string은 빈 문자열 "", 그 외는 null/[]
 2. 연락처(전화번호·이메일·카카오톡 ID 등)는 절대 included/excluded에 넣지 마세요. 별도로 치환됩니다.
 3. 가격이 "129만원" 같이 표기되면 1290000으로 정규화
-4. 오늘은 {{TODAY}} 이다. 본문에 연도가 없으면 과거가 되지 않도록 오늘 이후 가장 가까운 연도를 사용하라 (사진 촬영일 등 일정과 무관한 날짜의 연도에 끌리지 말 것)
+4. 오늘은 {{TODAY}} 이다. 본문에 연도가 명시되지 않은 출발일·마감일은 **반드시 현재 연도({{CURRENT_YEAR}})를 사용하라**. 본문에 "내년"·"2027년" 같은 명시적 표기가 있을 때만 그 연도를 따르라. 사진 촬영일·작성일 등 일정과 무관한 날짜의 연도에 끌리지 말 것
 5. departureLabel은 일정이 범위/불명확할 때만 채우고, 그때 departureDate에는 그 기간의 근사 시작일을 넣어라. 단일 정확 날짜면 departureLabel=null
 6. 모집인원: 본문에 인원 숫자가 하나라도 있으면 capacity=그 수, capacityLabel=null ("선착순 16명"도 capacity=16). 인원 숫자가 전혀 없을 때만(예: "선착순", "소수정예", "2인 출발 가능") capacity=0, capacityLabel=그 표현
 7. JSON 외 어떤 텍스트도 출력하지 마세요`;
@@ -56,10 +56,15 @@ export async function parseProduct(text: string): Promise<ParsedProductFields | 
   if (!text.trim()) return null;
 
   const client = getClient();
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const currentYear = now.getUTCFullYear();
   const msg = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
-    system: SYSTEM_PROMPT.replace("{{TODAY}}", new Date().toISOString().slice(0, 10)),
+    system: SYSTEM_PROMPT
+      .replace("{{TODAY}}", today)
+      .replace("{{CURRENT_YEAR}}", String(currentYear)),
     messages: [{ role: "user", content: text }],
   });
 
@@ -71,21 +76,37 @@ export async function parseProduct(text: string): Promise<ParsedProductFields | 
 
   try {
     const data = JSON.parse(match[0]) as Partial<ParsedProductFields>;
-    return normalize(data);
+    return normalize(data, currentYear);
   } catch {
     return null;
   }
 }
 
-function normalize(data: Partial<ParsedProductFields>): ParsedProductFields | null {
+// YYYY-MM-DD 의 연도가 현재 연도 + 1을 초과하면 현재 연도로 보정.
+// LLM이 본문에 명시되지 않은 연도를 너무 미래로 잡는 케이스 안전망.
+// 본문에 명시적으로 "2028년" 같은 표기가 있으면 LLM이 그걸 그대로 쓸 텐데,
+// 이런 케이스는 매우 드물고 잘못 보정해도 어드민이 수정 가능하므로 단순 가드 사용.
+function clampYearToCurrent(dateStr: string, currentYear: number): string {
+  const m = /^(\d{4})(-\d{2}-\d{2})$/.exec(dateStr);
+  if (!m) return dateStr;
+  const y = Number(m[1]);
+  if (y > currentYear + 1) return `${currentYear}${m[2]}`;
+  return dateStr;
+}
+
+function normalize(
+  data: Partial<ParsedProductFields>,
+  currentYear: number
+): ParsedProductFields | null {
   const destination = typeof data.destination === "string" ? data.destination.trim() : "";
   if (!destination) return null;
 
-  const departureDate =
+  const rawDeparture =
     typeof data.departureDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.departureDate)
       ? data.departureDate
       : "";
-  if (!departureDate) return null;
+  if (!rawDeparture) return null;
+  const departureDate = clampYearToCurrent(rawDeparture, currentYear);
 
   const nights = typeof data.nights === "number" && data.nights > 0 ? Math.floor(data.nights) : 0;
   const price = typeof data.price === "number" && data.price >= 0 ? Math.floor(data.price) : 0;
@@ -96,7 +117,7 @@ function normalize(data: Partial<ParsedProductFields>): ParsedProductFields | nu
 
   const deadline =
     typeof data.deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.deadline)
-      ? data.deadline
+      ? clampYearToCurrent(data.deadline, currentYear)
       : null;
 
   const departureLabel =
