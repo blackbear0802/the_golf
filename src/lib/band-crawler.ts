@@ -214,15 +214,18 @@ export async function runBandCrawl(startedAt: Date): Promise<BandCrawlResult> {
           order: number;
         }> = [];
 
+        // 한 글 내 이미지 저장은 병렬로 — 순차로 돌리면 한 글당 수십 초 걸려 함수 timeout 위험.
         const photoEntries = detail.photos.slice(0, MAX_IMAGES_PER_POST);
+        const storedUrls = await Promise.all(
+          photoEntries.map((p) => storeFromUrl(p.url))
+        );
         for (let i = 0; i < photoEntries.length; i++) {
           const { url, caption } = photoEntries[i];
-          const stored = await storeFromUrl(url);
           const cat = classifyImage(url, caption || null, detail.content);
           mediaRows.push({
             productId: created.id,
             type: cat,
-            url: stored,
+            url: storedUrls[i],
             caption: caption ? caption : null,
             order: i,
           });
