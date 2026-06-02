@@ -1,0 +1,279 @@
+// 어드민 상품 목록 테이블 — 체크박스 선택·전체선택·일괄 삭제·개별 삭제 + 행 클릭으로 상세 이동.
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+
+export type ProductRow = {
+  id: string;
+  destination: string;
+  golfCourse: string | null;
+  departureLabel: string | null;
+  departureDateText: string;
+  nights: number;
+  price: number;
+  capacity: number;
+  capacityLabel: string | null;
+  autoImported: boolean;
+  mediaCount: number;
+  totalBookings: number;
+  cancelledBookings: number;
+  activeBookings: number;
+  createdAtText: string;
+};
+
+function formatPrice(price: number) {
+  return new Intl.NumberFormat("ko-KR").format(price);
+}
+
+export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
+  const router = useRouter();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [, startTransition] = useTransition();
+
+  const selectableIds = useMemo(
+    () => rows.filter((r) => r.activeBookings === 0).map((r) => r.id),
+    [rows]
+  );
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
+  const someSelected = selected.size > 0 && !allSelected;
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(selectableIds));
+    }
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    if (selected.size === 0) return;
+    if (
+      !window.confirm(
+        `선택한 ${selected.size}개 상품을 삭제하시겠어요? 되돌릴 수 없습니다.`
+      )
+    ) {
+      return;
+    }
+    setError("");
+    setBulkBusy(true);
+    const ids = Array.from(selected);
+    const res = await fetch("/api/admin/products", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    setBulkBusy(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "일괄 삭제에 실패했습니다.");
+      return;
+    }
+    const data = (await res.json()) as {
+      deleted: number;
+      skipped: { id: string; reason: string }[];
+    };
+    setSelected(new Set());
+    if (data.skipped.length > 0) {
+      setError(
+        `${data.deleted}건 삭제됨. ${data.skipped.length}건은 건너뜀(활성 예약 등).`
+      );
+    }
+    startTransition(() => router.refresh());
+  }
+
+  async function handleSingleDelete(row: ProductRow) {
+    if (
+      !window.confirm(
+        `'${row.destination}' 상품을 삭제하시겠어요? 되돌릴 수 없습니다.`
+      )
+    ) {
+      return;
+    }
+    setError("");
+    setBusyId(row.id);
+    const res = await fetch(`/api/admin/products/${row.id}`, {
+      method: "DELETE",
+    });
+    setBusyId(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "삭제에 실패했습니다.");
+      return;
+    }
+    startTransition(() => router.refresh());
+  }
+
+  return (
+    <div className="mt-6 space-y-3">
+      {(selected.size > 0 || error) && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-neutral-200 bg-warm-50/50 px-4 py-3">
+          <span className="text-sm font-bold text-neutral-800">
+            {selected.size}개 선택됨
+          </span>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            disabled={selected.size === 0 || bulkBusy}
+            className="inline-flex h-9 items-center rounded-lg bg-red-600 px-4 text-sm font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          >
+            {bulkBusy ? "삭제 중…" : "선택 항목 삭제"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            disabled={selected.size === 0 || bulkBusy}
+            className="inline-flex h-9 items-center rounded-lg border border-neutral-300 px-3 text-sm font-bold text-neutral-700 transition-colors hover:bg-neutral-50 disabled:opacity-50"
+          >
+            선택 해제
+          </button>
+          {error && (
+            <p className="text-sm font-medium text-red-600">{error}</p>
+          )}
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
+        <table className="w-full text-sm md:text-base">
+          <thead className="bg-neutral-50 text-sm text-neutral-500">
+            <tr className="border-b border-neutral-200">
+              <th className="w-10 px-3 py-3 text-center">
+                <input
+                  type="checkbox"
+                  aria-label="전체 선택"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  onChange={toggleAll}
+                  disabled={selectableIds.length === 0}
+                  className="h-4 w-4 cursor-pointer accent-warm-500"
+                />
+              </th>
+              <th className="px-4 py-3 text-left font-bold">목적지</th>
+              <th className="px-4 py-3 text-left font-bold">골프장</th>
+              <th className="px-4 py-3 text-left font-bold">출발</th>
+              <th className="px-4 py-3 text-left font-bold">박수</th>
+              <th className="px-4 py-3 text-left font-bold">가격</th>
+              <th className="px-4 py-3 text-left font-bold">정원</th>
+              <th className="px-4 py-3 text-left font-bold">출처</th>
+              <th className="px-4 py-3 text-left font-bold">미디어</th>
+              <th className="px-4 py-3 text-left font-bold">예약</th>
+              <th className="px-4 py-3 text-left font-bold whitespace-nowrap">
+                등록일시
+              </th>
+              <th className="px-4 py-3 text-right font-bold">관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((p) => {
+              const deletable = p.activeBookings === 0;
+              const checked = selected.has(p.id);
+              return (
+                <tr key={p.id} className="border-b border-neutral-100">
+                  <td className="px-3 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      aria-label={`${p.destination} 선택`}
+                      checked={checked}
+                      onChange={() => toggleOne(p.id)}
+                      disabled={!deletable}
+                      title={!deletable ? "활성 예약이 있어 선택 불가" : ""}
+                      className="h-4 w-4 cursor-pointer accent-warm-500 disabled:cursor-not-allowed disabled:opacity-40"
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/products/${p.id}`}
+                      className="font-bold text-neutral-900 hover:text-warm-600"
+                    >
+                      {p.destination}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-neutral-700">
+                    {p.golfCourse ?? "-"}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-700 whitespace-nowrap">
+                    {p.departureLabel ?? p.departureDateText}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-700">{p.nights}박</td>
+                  <td className="px-4 py-3 font-bold text-warm-600 whitespace-nowrap">
+                    {formatPrice(p.price)}원
+                  </td>
+                  <td className="px-4 py-3 text-neutral-700">
+                    {p.capacityLabel ??
+                      (p.capacity > 0 ? `${p.capacity}명` : "—")}
+                  </td>
+                  <td className="px-4 py-3">
+                    {p.autoImported ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
+                        자동등록
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-600 ring-1 ring-neutral-200">
+                        수동
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-700">{p.mediaCount}개</td>
+                  <td className="px-4 py-3 text-neutral-700 whitespace-nowrap">
+                    {p.totalBookings}건
+                    {p.cancelledBookings > 0 && (
+                      <span className="ml-1 text-xs text-neutral-400">
+                        (취소 {p.cancelledBookings})
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-500 whitespace-nowrap text-sm">
+                    {p.createdAtText}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/admin/products/${p.id}/edit`}
+                        className="inline-flex h-9 items-center rounded-lg border border-warm-300 px-3 text-sm font-bold text-warm-700 transition-colors hover:bg-warm-50"
+                      >
+                        수정
+                      </Link>
+                      {deletable ? (
+                        <button
+                          type="button"
+                          onClick={() => handleSingleDelete(p)}
+                          disabled={busyId === p.id}
+                          className="inline-flex h-9 items-center rounded-lg border border-red-300 px-3 text-sm font-bold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {busyId === p.id ? "삭제 중…" : "삭제"}
+                        </button>
+                      ) : (
+                        <span
+                          className="text-xs text-neutral-400 whitespace-nowrap"
+                          title="취소되지 않은 예약이 연결되어 삭제할 수 없습니다."
+                        >
+                          활성 예약 {p.activeBookings}건
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

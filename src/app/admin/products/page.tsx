@@ -1,18 +1,9 @@
-// 어드민 상품 관리 (목록 + 자동/수동 필터 + 자동등록 뱃지)
+// 어드민 상품 관리 (목록 + 자동/수동 필터 + 등록일시 컬럼 + 다중선택 일괄삭제)
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-import DeleteProductButton from "@/components/admin/DeleteProductButton";
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("ko-KR").format(price);
-}
-
-function formatDate(date: Date) {
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}.${m}.${d}`;
-}
+import ProductsTable, { type ProductRow } from "@/components/admin/ProductsTable";
+import { formatDateKST, formatDateTimeKST } from "@/lib/format-datetime";
 
 type Filter = "all" | "auto" | "manual";
 
@@ -36,10 +27,11 @@ export default async function AdminProductsPage({
         ? { autoImported: false }
         : {};
 
+  // 최근 등록(자동크롤·빠른등록 무관) 순으로 위에 노출.
   const [products, autoCount, manualCount, totalCount] = await Promise.all([
     prisma.product.findMany({
       where,
-      orderBy: { departureDate: "asc" },
+      orderBy: { createdAt: "desc" },
       include: {
         _count: { select: { media: true } },
         bookings: { select: { status: true } },
@@ -49,6 +41,30 @@ export default async function AdminProductsPage({
     prisma.product.count({ where: { autoImported: false } }),
     prisma.product.count(),
   ]);
+
+  const rows: ProductRow[] = products.map((p) => {
+    const totalBookings = p.bookings.length;
+    const cancelledBookings = p.bookings.filter(
+      (b) => b.status === "cancelled"
+    ).length;
+    return {
+      id: p.id,
+      destination: p.destination,
+      golfCourse: p.golfCourse,
+      departureLabel: p.departureLabel,
+      departureDateText: formatDateKST(p.departureDate) ?? "-",
+      nights: p.nights,
+      price: p.price,
+      capacity: p.capacity,
+      capacityLabel: p.capacityLabel,
+      autoImported: p.autoImported,
+      mediaCount: p._count.media,
+      totalBookings,
+      cancelledBookings,
+      activeBookings: totalBookings - cancelledBookings,
+      createdAtText: formatDateTimeKST(p.createdAt) ?? "-",
+    };
+  });
 
   return (
     <div>
@@ -81,106 +97,15 @@ export default async function AdminProductsPage({
         <FilterChip current={filter} value="manual" label={`수동등록 ${manualCount}`} />
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
-        {products.length === 0 ? (
+      {rows.length === 0 ? (
+        <div className="mt-6 overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
           <p className="p-10 text-center text-base text-neutral-500">
             조건에 맞는 상품이 없습니다.
           </p>
-        ) : (
-          <table className="w-full text-sm md:text-base">
-            <thead className="bg-neutral-50 text-sm text-neutral-500">
-              <tr className="border-b border-neutral-200">
-                <th className="px-4 py-3 text-left font-bold">목적지</th>
-                <th className="px-4 py-3 text-left font-bold">골프장</th>
-                <th className="px-4 py-3 text-left font-bold">출발</th>
-                <th className="px-4 py-3 text-left font-bold">박수</th>
-                <th className="px-4 py-3 text-left font-bold">가격</th>
-                <th className="px-4 py-3 text-left font-bold">정원</th>
-                <th className="px-4 py-3 text-left font-bold">출처</th>
-                <th className="px-4 py-3 text-left font-bold">미디어</th>
-                <th className="px-4 py-3 text-left font-bold">예약</th>
-                <th className="px-4 py-3 text-right font-bold">관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => {
-                const totalBookings = p.bookings.length;
-                const cancelledBookings = p.bookings.filter(
-                  (b) => b.status === "cancelled"
-                ).length;
-                const activeBookings = totalBookings - cancelledBookings;
-                const deletable = activeBookings === 0;
-                return (
-                <tr key={p.id} className="border-b border-neutral-100">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/products/${p.id}`}
-                      className="font-bold text-neutral-900 hover:text-warm-600"
-                    >
-                      {p.destination}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-700">{p.golfCourse ?? "-"}</td>
-                  <td className="px-4 py-3 text-neutral-700 whitespace-nowrap">
-                    {p.departureLabel ?? formatDate(p.departureDate)}
-                  </td>
-                  <td className="px-4 py-3 text-neutral-700">{p.nights}박</td>
-                  <td className="px-4 py-3 font-bold text-warm-600 whitespace-nowrap">
-                    {formatPrice(p.price)}원
-                  </td>
-                  <td className="px-4 py-3 text-neutral-700">
-                    {p.capacityLabel ?? (p.capacity > 0 ? `${p.capacity}명` : "—")}
-                  </td>
-                  <td className="px-4 py-3">
-                    {p.autoImported ? (
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
-                        자동등록
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-600 ring-1 ring-neutral-200">
-                        수동
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-neutral-700">{p._count.media}개</td>
-                  <td className="px-4 py-3 text-neutral-700 whitespace-nowrap">
-                    {totalBookings}건
-                    {cancelledBookings > 0 && (
-                      <span className="ml-1 text-xs text-neutral-400">
-                        (취소 {cancelledBookings})
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/admin/products/${p.id}/edit`}
-                        className="inline-flex h-9 items-center rounded-lg border border-warm-300 px-3 text-sm font-bold text-warm-700 transition-colors hover:bg-warm-50"
-                      >
-                        수정
-                      </Link>
-                      {deletable ? (
-                        <DeleteProductButton
-                          productId={p.id}
-                          destination={p.destination}
-                        />
-                      ) : (
-                        <span
-                          className="text-xs text-neutral-400 whitespace-nowrap"
-                          title="취소되지 않은 예약이 연결되어 삭제할 수 없습니다."
-                        >
-                          활성 예약 {activeBookings}건
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+        </div>
+      ) : (
+        <ProductsTable rows={rows} />
+      )}
     </div>
   );
 }
