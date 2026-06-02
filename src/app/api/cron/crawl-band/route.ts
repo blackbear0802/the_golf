@@ -17,7 +17,8 @@ export async function GET(req: Request) {
   try {
     const result = await runBandCrawl(new Date());
 
-    if ("skipped" in result) {
+    // 성공 응답에도 skipped(개수: number)가 들어있어서 문자열 분기만 skip 사유로 처리.
+    if ("skipped" in result && typeof result.skipped === "string") {
       if (result.skipped === "missing_credentials") {
         return NextResponse.json({ error: "missing_credentials" }, { status: 400 });
       }

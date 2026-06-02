@@ -16,7 +16,9 @@ export async function POST() {
   try {
     const result = await runBandCrawl(new Date());
 
-    if ("skipped" in result) {
+    // 성공 응답에도 skipped(개수: number)가 들어있어서 "skipped" in result 만으로는
+    // skip 사유와 성공이 구분되지 않는다. 문자열일 때만 skip 사유로 처리.
+    if ("skipped" in result && typeof result.skipped === "string") {
       const baseReason =
         result.skipped === "disabled"
           ? "크롤링이 비활성 상태입니다. 활성화 후 다시 시도하세요."
