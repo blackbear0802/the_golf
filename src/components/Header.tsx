@@ -154,17 +154,13 @@ export default function Header() {
                 <div className="my-2 border-t border-neutral-200" />
                 <button
                   type="button"
-                  onClick={async () => {
+                  onClick={() => {
                     close();
-                    // 로그아웃 전 챗 정리 — 서버 세션 삭제 + 로컬 sessionStorage 비움.
-                    // 다음 로그인 때 이전 대화가 자동 복원되지 않도록.
-                    try {
-                      await fetch("/api/chat/session", { method: "DELETE" });
-                    } catch {
-                      // 네트워크 실패해도 로그아웃은 진행
-                    }
+                    // 챗 화면 상태(현재 활성 세션·익명 메시지)는 비워서 다음 로그인이 빈 챗으로 시작.
+                    // DB의 챗 히스토리는 보존(사이드바에서 다시 열어볼 수 있도록).
                     try {
                       sessionStorage.removeItem("thegolf.chat.messages");
+                      sessionStorage.removeItem("thegolf.chat.session-id");
                     } catch {
                       // SSR/접근 불가 환경 무시
                     }

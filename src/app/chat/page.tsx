@@ -1,7 +1,7 @@
-// AI 챗 페이지 — 클라이언트 ChatRoom 셸. /chat?initial=<query> 로 진입 시 자동 첫 메시지.
+// AI 챗 페이지 — 사이드바 히스토리 + ChatRoom. /chat?initial=<query> 로 진입 시 새 챗 + 자동 첫 메시지.
 import type { Metadata } from "next";
 import Header from "@/components/Header";
-import ChatRoom from "@/components/chat/ChatRoom";
+import ChatLayout from "@/components/chat/ChatLayout";
 
 export const metadata: Metadata = {
   title: "AI 상담",
@@ -21,7 +21,7 @@ export default async function ChatPage({
     <>
       <Header />
       <main className="flex-1">
-        <ChatRoom initial={initial} />
+        <ChatLayout initial={initial} />
       </main>
     </>
   );

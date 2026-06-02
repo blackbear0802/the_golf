@@ -1,4 +1,6 @@
-// AI 챗 대화창 — NDJSON 스트리밍 수신, 로그인 시 DB 세션 복원
+// AI 챗 대화창 — NDJSON 스트리밍 수신.
+// 세션 관리는 부모(ChatLayout)가 담당. activeSessionId 변경 시 컴포넌트가 remount되어
+// 그 세션 메시지를 새로 로드. 새 챗(null)은 비어있는 상태로 시작.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -7,86 +9,94 @@ import ChatMessage, { type Message } from "./ChatMessage";
 import type { RecommendedProduct, CatalogLink } from "@/lib/chat-tools";
 
 const STORAGE_KEY = "thegolf.chat.messages";
+const SESSION_ID_KEY = "thegolf.chat.session-id";
 
-type Props = { initial: string };
+type Props = {
+  initial: string;
+  // null = 새 챗. string = 기존 세션 id를 로드.
+  activeSessionId: string | null;
+  // 첫 메시지로 서버가 새 세션을 만들면 부모에 알려서 사이드바 갱신.
+  onSessionCreated: (id: string) => void;
+};
 
-export default function ChatRoom({ initial }: Props) {
+export default function ChatRoom({ initial, activeSessionId, onSessionCreated }: Props) {
   const { status: authStatus } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hydrated, setHydrated] = useState(false);
-  const sessionIdRef = useRef<string>("");
+  const sessionIdRef = useRef<string>(activeSessionId ?? "");
   const initialSentRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // sessionStorage 복원 헬퍼
-  function restoreFromStorage() {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Message[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
-          initialSentRef.current = true;
-        }
-      }
-    } catch {
-      // 손상된 JSON 무시
-    }
-  }
-
-  // 마운트: authStatus 확정 후 세션 ID 생성 + 대화 복원
+  // 마운트: 세션 로드 결정
+  // - 로그인 + activeSessionId 있음 → DB에서 그 세션 로드
+  // - 비로그인 → sessionStorage에서 복원(익명 연속성 유지)
+  // - 로그인 + activeSessionId 없음 → 빈 챗으로 시작
   useEffect(() => {
     if (authStatus === "loading") return;
 
-    if (!sessionIdRef.current) {
+    if (authStatus === "authenticated" && activeSessionId) {
+      sessionIdRef.current = activeSessionId;
+      fetch(`/api/chat/sessions/${activeSessionId}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then((data: { messages: { role: string; content: string }[] }) => {
+          setMessages(
+            data.messages.map((m): Message =>
+              m.role === "user"
+                ? { role: "user", content: m.content }
+                : { role: "assistant", content: m.content }
+            )
+          );
+          initialSentRef.current = true;
+        })
+        .catch(() => {
+          // 로드 실패해도 화면은 띄움
+          setMessages([]);
+          initialSentRef.current = false;
+        })
+        .finally(() => setHydrated(true));
+    } else if (authStatus === "unauthenticated") {
+      // 익명 사용자: sessionStorage 폴백
+      try {
+        const raw = sessionStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Message[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+            initialSentRef.current = true;
+          }
+        }
+      } catch {
+        // 손상된 JSON 무시
+      }
       sessionIdRef.current =
         typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
           : `s-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    }
-
-    if (authStatus === "authenticated") {
-      // 로그인: 서버 DB에서 복원 시도, 실패 시 sessionStorage 폴백
-      fetch("/api/chat/session")
-        .then((r) => r.json())
-        .then((data: { messages: { role: string; content: string }[]; sessionId: string | null }) => {
-          if (Array.isArray(data.messages) && data.messages.length > 0) {
-            setMessages(
-              data.messages.map((m): Message =>
-                m.role === "user"
-                  ? { role: "user", content: m.content }
-                  : { role: "assistant", content: m.content }
-              )
-            );
-            if (data.sessionId) sessionIdRef.current = data.sessionId;
-            initialSentRef.current = true;
-          } else {
-            restoreFromStorage();
-          }
-        })
-        .catch(() => restoreFromStorage())
-        .finally(() => setHydrated(true));
+      setHydrated(true);
     } else {
-      restoreFromStorage();
+      // 로그인 + activeSessionId 없음 → 새 챗
+      sessionIdRef.current = "";
+      setMessages([]);
+      initialSentRef.current = false;
       setHydrated(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authStatus]);
+  }, [authStatus, activeSessionId]);
 
-  // messages 바뀔 때마다 sessionStorage 동기화
+  // 익명 사용자: 메시지 변경 시 sessionStorage 동기화. 로그인은 DB가 source of truth.
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || authStatus !== "unauthenticated") return;
     try {
       if (messages.length === 0) sessionStorage.removeItem(STORAGE_KEY);
       else sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
     } catch {
       // quota 초과 등 무시
     }
-  }, [messages, hydrated]);
+  }, [messages, hydrated, authStatus]);
 
   // initial query 자동 전송 (hydration 끝, 복원 없을 때 한 번)
   useEffect(() => {
@@ -132,7 +142,7 @@ export default function ChatRoom({ initial }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: sendMessages.map((m) => ({ role: m.role, content: m.content })),
-          sessionId: sessionIdRef.current,
+          sessionId: sessionIdRef.current || null,
         }),
       });
 
@@ -189,7 +199,18 @@ export default function ChatRoom({ initial }: Props) {
               });
             }
           } else if (event.type === "done") {
-            if (event.sessionId) sessionIdRef.current = event.sessionId;
+            if (event.sessionId) {
+              const newId = event.sessionId;
+              const wasNew = !sessionIdRef.current || sessionIdRef.current !== newId;
+              sessionIdRef.current = newId;
+              // 페이지 새로고침 시 같은 세션을 이어볼 수 있도록 sessionStorage에 저장.
+              try {
+                sessionStorage.setItem(SESSION_ID_KEY, newId);
+              } catch {
+                // 무시
+              }
+              if (wasNew) onSessionCreated(newId);
+            }
             const products = Array.isArray(event.products) ? event.products : [];
             const link = event.link ?? null;
             setMessages((prev) => {
@@ -232,37 +253,16 @@ export default function ChatRoom({ initial }: Props) {
     }
   }
 
-  function newConversation() {
-    setMessages([]);
-    setInput("");
-    setError("");
-    // 새 UUID로 리셋 → 다음 메시지에서 새 ChatSession 생성
-    sessionIdRef.current =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `s-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    initialSentRef.current = true;
-  }
-
   const lastIsAssistant =
     messages.length > 0 && messages[messages.length - 1].role === "assistant";
 
   return (
-    <div className="mx-auto flex h-[calc(100svh-5rem)] max-w-3xl flex-col px-4 md:px-6">
+    <div className="flex h-[calc(100svh-5rem)] flex-col px-4 md:px-6">
       <div className="flex items-center justify-between py-4">
         <div>
           <h1 className="text-xl md:text-2xl font-black text-neutral-900">AI 골프 투어 상담</h1>
           <p className="text-sm text-neutral-500">자연어로 원하시는 조건을 말씀해주세요</p>
         </div>
-        {messages.length > 0 && (
-          <button
-            type="button"
-            onClick={newConversation}
-            className="rounded-xl border-2 border-neutral-200 px-4 py-2 text-sm font-bold text-neutral-700 transition-colors hover:bg-neutral-50"
-          >
-            새 대화
-          </button>
-        )}
       </div>
 
       <div
