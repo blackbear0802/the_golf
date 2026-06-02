@@ -4,17 +4,7 @@ import SettingsForm from "@/components/admin/SettingsForm";
 import CrawlTriggerCard from "@/components/admin/CrawlTriggerCard";
 import BandConnectionCard from "@/components/admin/BandConnectionCard";
 import { fetchBands, type BandSummary } from "@/lib/band-api-client";
-
-function formatDateTime(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${d.getFullYear()}.${m}.${day} ${hh}:${mm}`;
-}
+import { formatDateTimeKST } from "@/lib/format-datetime";
 
 export default async function AdminSettingsPage({
   searchParams,
@@ -42,8 +32,8 @@ export default async function AdminSettingsPage({
   ]);
 
   const connected = !!cfg.bandAccessToken;
-  const lastCrawlAt = formatDateTime(cfg.lastCrawlAt);
-  const connectedAt = formatDateTime(cfg.bandConnectedAt);
+  const lastCrawlAt = formatDateTimeKST(cfg.lastCrawlAt);
+  const connectedAt = formatDateTimeKST(cfg.bandConnectedAt);
   const lastSuccess = cfg.lastCrawlSuccess === "true";
 
   let bands: BandSummary[] = [];
