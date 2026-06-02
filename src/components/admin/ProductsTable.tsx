@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 export type ProductRow = {
@@ -29,6 +29,13 @@ function formatPrice(price: number) {
 
 export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
   const router = useRouter();
+  // 삭제 직후 즉시 행을 사라지게 하려면 optimistic 로컬 state 유지.
+  // 서버 props가 갱신되면 다시 동기화.
+  const [localRows, setLocalRows] = useState<ProductRow[]>(rows);
+  useEffect(() => {
+    setLocalRows(rows);
+  }, [rows]);
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -36,8 +43,8 @@ export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
   const [, startTransition] = useTransition();
 
   const selectableIds = useMemo(
-    () => rows.filter((r) => r.activeBookings === 0).map((r) => r.id),
-    [rows]
+    () => localRows.filter((r) => r.activeBookings === 0).map((r) => r.id),
+    [localRows]
   );
   const allSelected =
     selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
@@ -87,6 +94,10 @@ export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
       deleted: number;
       skipped: { id: string; reason: string }[];
     };
+    const skippedIds = new Set(data.skipped.map((s) => s.id));
+    const deletedIds = new Set(ids.filter((id) => !skippedIds.has(id)));
+    // 즉시 화면에서 사라지게 — 서버 refresh 기다리지 않음.
+    setLocalRows((prev) => prev.filter((r) => !deletedIds.has(r.id)));
     setSelected(new Set());
     if (data.skipped.length > 0) {
       setError(
@@ -115,6 +126,14 @@ export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
       setError(data.error ?? "삭제에 실패했습니다.");
       return;
     }
+    // 즉시 화면에서 사라지게.
+    setLocalRows((prev) => prev.filter((r) => r.id !== row.id));
+    setSelected((prev) => {
+      if (!prev.has(row.id)) return prev;
+      const next = new Set(prev);
+      next.delete(row.id);
+      return next;
+    });
     startTransition(() => router.refresh());
   }
 
@@ -180,7 +199,7 @@ export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((p) => {
+            {localRows.map((p) => {
               const deletable = p.activeBookings === 0;
               const checked = selected.has(p.id);
               return (
