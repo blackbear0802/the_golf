@@ -154,8 +154,20 @@ export default function Header() {
                 <div className="my-2 border-t border-neutral-200" />
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     close();
+                    // 로그아웃 전 챗 정리 — 서버 세션 삭제 + 로컬 sessionStorage 비움.
+                    // 다음 로그인 때 이전 대화가 자동 복원되지 않도록.
+                    try {
+                      await fetch("/api/chat/session", { method: "DELETE" });
+                    } catch {
+                      // 네트워크 실패해도 로그아웃은 진행
+                    }
+                    try {
+                      sessionStorage.removeItem("thegolf.chat.messages");
+                    } catch {
+                      // SSR/접근 불가 환경 무시
+                    }
                     signOut({ callbackUrl: "/" });
                   }}
                   className="flex h-14 items-center rounded-xl px-4 text-lg font-bold text-neutral-600 transition-colors hover:bg-neutral-50"

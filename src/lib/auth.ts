@@ -4,8 +4,14 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
+// 세션 길이: 기본 30일 → 1일로 단축.
+// 사용자가 브라우저 종료 후 며칠 지난 뒤 자동 로그인 상태로 들어오는 걸 막기 위함.
+// 1일 유지 + 활동 시 갱신(updateAge 기본 24h)이면 활성 사용자는 끊김 없이 사용.
+const ONE_DAY_SECONDS = 60 * 60 * 24;
+
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: ONE_DAY_SECONDS },
+  jwt: { maxAge: ONE_DAY_SECONDS },
   pages: {
     signIn: "/login",
   },
