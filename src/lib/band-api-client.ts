@@ -132,16 +132,38 @@ export async function fetchPostDetail(
   })) as { post?: Record<string, unknown> } | null;
 
   const p = data?.post ?? {};
-  const photos = Array.isArray(p.photos)
-    ? (p.photos as unknown[])
-        .map((pp) => {
-          const o = pp as Record<string, unknown>;
-          return typeof o.url === "string" ? o.url : "";
-        })
-        .filter(Boolean)
-    : [];
   const content = typeof p.content === "string" ? p.content : "";
   const author = (p.author as Record<string, unknown> | undefined)?.name;
+
+  // BAND는 사진을 p.photo 객체 맵(키=photo_id)으로 반환한다(배열 아님).
+  // 본문 안 <band:attachment type="photo" id="..." /> 순서대로 정렬해서
+  // 게시글 작성자가 의도한 표시 순서를 보존한다.
+  const photoMap: Record<string, string> = {};
+  const photoObj = (p as { photo?: unknown }).photo;
+  if (photoObj && typeof photoObj === "object") {
+    for (const [id, o] of Object.entries(photoObj as Record<string, unknown>)) {
+      const url = (o as { url?: unknown })?.url;
+      if (typeof url === "string" && url) photoMap[id] = url;
+    }
+  }
+  const orderedUrls: string[] = [];
+  const seen = new Set<string>();
+  for (const m of content.matchAll(
+    /<band:attachment\s+type="photo"\s+id="(\d+)"\s*\/?>/gi
+  )) {
+    const url = photoMap[m[1]];
+    if (url && !seen.has(url)) {
+      orderedUrls.push(url);
+      seen.add(url);
+    }
+  }
+  // 본문에서 미참조된 사진은 뒤에 보존
+  for (const url of Object.values(photoMap)) {
+    if (!seen.has(url)) {
+      orderedUrls.push(url);
+      seen.add(url);
+    }
+  }
 
   return {
     postKey,
@@ -149,7 +171,7 @@ export async function fetchPostDetail(
     content,
     createdAt: typeof p.created_at === "number" ? p.created_at : undefined,
     authorName: typeof author === "string" ? author : undefined,
-    photoUrls: photos,
+    photoUrls: orderedUrls,
     youtubeUrls: extractYoutubeUrls(content),
   };
 }
