@@ -29,7 +29,12 @@ export async function GET(
   }
   return NextResponse.json({
     sessionId: session.id,
-    messages: session.messages.map((m) => ({ role: m.role, content: m.content })),
+    messages: session.messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      recommendedProducts: m.recommendedProducts ?? null,
+      link: m.catalogLink ?? null,
+    })),
   });
 }
 

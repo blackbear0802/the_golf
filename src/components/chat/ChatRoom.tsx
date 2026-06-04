@@ -42,16 +42,32 @@ export default function ChatRoom({ initial, activeSessionId, onSessionCreated }:
       sessionIdRef.current = activeSessionId;
       fetch(`/api/chat/sessions/${activeSessionId}`)
         .then((r) => (r.ok ? r.json() : Promise.reject()))
-        .then((data: { messages: { role: string; content: string }[] }) => {
-          setMessages(
-            data.messages.map((m): Message =>
-              m.role === "user"
-                ? { role: "user", content: m.content }
-                : { role: "assistant", content: m.content }
-            )
-          );
-          initialSentRef.current = true;
-        })
+        .then(
+          (data: {
+            messages: {
+              role: string;
+              content: string;
+              recommendedProducts?: RecommendedProduct[] | null;
+              link?: CatalogLink | null;
+            }[];
+          }) => {
+            setMessages(
+              data.messages.map((m): Message =>
+                m.role === "user"
+                  ? { role: "user", content: m.content }
+                  : {
+                      role: "assistant",
+                      content: m.content,
+                      recommendedProducts: Array.isArray(m.recommendedProducts)
+                        ? m.recommendedProducts
+                        : [],
+                      link: m.link ?? null,
+                    }
+              )
+            );
+            initialSentRef.current = true;
+          }
+        )
         .catch(() => {
           // 로드 실패해도 화면은 띄움
           setMessages([]);

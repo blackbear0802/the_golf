@@ -152,11 +152,14 @@ model ChatSession {
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
-  sessionId String   @map("session_id")
-  role      ChatRole
-  content   String   @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
+  id                  String   @id @default(cuid())
+  sessionId           String   @map("session_id")
+  role                ChatRole
+  content             String   @db.Text
+  // 도구 호출 결과 — 추천 상품 카드·카탈로그 링크. 히스토리 복원 시 카드가 같이 보이도록 저장.
+  recommendedProducts Json?    @map("recommended_products")
+  catalogLink         Json?    @map("catalog_link")
+  createdAt           DateTime @default(now()) @map("created_at")
 
   session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 

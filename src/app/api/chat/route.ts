@@ -8,7 +8,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Anthropic from "@anthropic-ai/sdk";
-import { CHAT_SYSTEM_PROMPT } from "@/lib/chat-prompts";
+import { buildChatSystemPrompt } from "@/lib/chat-prompts";
 import {
   SEARCH_PRODUCTS_TOOL,
   BROWSE_CATALOG_TOOL,
@@ -113,13 +113,20 @@ export async function POST(req: Request) {
     try {
       const client = getClient();
       const tools = [SEARCH_PRODUCTS_TOOL, BROWSE_CATALOG_TOOL];
+      const systemPrompt = buildChatSystemPrompt(new Date());
 
-      // 첫 번째 호출: tool_use 감지(비스트리밍으로 빠르게)
+      // 첫 번째 호출: tool_use 감지(비스트리밍으로 빠르게).
+      // 휴리스틱: 사용자 마지막 메시지에 명시적 검색 신호(국가/시기/박수/예산/인원)가 있으면
+      // tool_choice="any"로 도구 호출을 강제. 그렇지 않으면 모델이 자유롭게 판단.
+      const lastUserText = messages[messages.length - 1].content;
+      const forceTool = hasSearchSignal(lastUserText);
+
       const first = await client.messages.create({
         model: MODEL,
         max_tokens: MAX_TOKENS,
-        system: CHAT_SYSTEM_PROMPT,
+        system: systemPrompt,
         tools,
+        ...(forceTool ? { tool_choice: { type: "any" as const } } : {}),
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
       });
 
@@ -147,7 +154,7 @@ export async function POST(req: Request) {
         const stream = client.messages.stream({
           model: MODEL,
           max_tokens: MAX_TOKENS,
-          system: CHAT_SYSTEM_PROMPT,
+          system: systemPrompt,
           tools,
           messages: [
             ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -193,11 +200,18 @@ export async function POST(req: Request) {
         sessionId: dbSessionId,
       });
 
-      // assistant 메시지 DB 저장
+      // assistant 메시지 DB 저장 — 추천 상품·링크도 같이 (히스토리에서 카드 복원용).
       if (userId && dbSessionId) {
         await Promise.all([
           prisma.chatMessage.create({
-            data: { sessionId: dbSessionId, role: "assistant", content: responseText },
+            data: {
+              sessionId: dbSessionId,
+              role: "assistant",
+              content: responseText,
+              recommendedProducts:
+                recommendedProducts.length > 0 ? recommendedProducts : undefined,
+              catalogLink: catalogLink ?? undefined,
+            },
           }),
           prisma.chatSession.update({
             where: { id: dbSessionId },
@@ -240,6 +254,31 @@ function sanitizeMessages(raw: unknown): ClientMessage[] | null {
   }
   if (out[out.length - 1].role !== "user") return null;
   return out;
+}
+
+// 사용자 메시지에 명시적 상품 검색 신호가 있는지. 있으면 첫 호출에서 tool_choice=any로 강제.
+// 휴리스틱이 보수적으로 동작해 false negative(되묻기)를 줄이는 게 목표.
+function hasSearchSignal(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  // 국가/지역 키워드(regions.ts와 일치하는 국가명 + 흔한 지역 별칭)
+  const PLACE = /(중국|베트남|태국|일본|필리핀|말레이시아|다낭|호치민|푸꾸옥|나트랑|후쿠오카|오키나와|구마모토|사가|도쿄|오사카|치앙마이|방콕|파타야|시랏차|클라크|세부|코타키나발루|쿠알라룸푸르|상하이|베이징|웨이하이|쑤첸|염성|허페이|합비)/;
+  // 시기(N월, 다음/이번 달, YYYY-MM 포함)
+  const WHEN = /(\d{1,2}\s*월|다음\s*달|이번\s*달|올여름|올겨울|내년|\d{4}[-/.]\d{1,2})/;
+  // 박수·예산·인원
+  const NIGHTS = /\d+\s*박/;
+  const BUDGET = /(예산|\d+\s*만\s*원|\d+\s*만원|\d{1,3}(?:,\d{3})+\s*원)/;
+  const HEAD = /\d+\s*명/;
+  // 전체 둘러보기 신호 — browse_catalog 강제용
+  const BROWSE = /(전체\s*상품|다\s*보여|모두|뭐\s*있|어떤\s*상품)/;
+  return (
+    PLACE.test(t) ||
+    WHEN.test(t) ||
+    NIGHTS.test(t) ||
+    BUDGET.test(t) ||
+    HEAD.test(t) ||
+    BROWSE.test(t)
+  );
 }
 
 function extractText(content: Anthropic.Messages.Message["content"]): string {
