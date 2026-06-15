@@ -67,8 +67,8 @@ export default async function FloatingDeals() {
         </ul>
       </aside>
 
-      <aside className="lg:hidden border-b-2 border-warm-200 bg-white">
-        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+      <aside className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t-2 border-warm-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between px-4 py-2">
           <p className="text-base font-black text-warm-600">{featuredIds.length > 0 ? "🔥 이번주 특가" : "🔥 지금 인기 투어"}</p>
         </div>
         <ul className="flex gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory">
