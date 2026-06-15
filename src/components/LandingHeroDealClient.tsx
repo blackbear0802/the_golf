@@ -89,8 +89,8 @@ export default function LandingHeroDealClient({
     router.push(`/register?callbackUrl=${encodeURIComponent(target)}`);
   }
 
-  // 모달 상단 히어로로 쓰는 대표 이미지는 갤러리에서 제외해 중복 노출 방지.
-  const galleryImages = product.images.filter((img) => img.url !== product.thumbnail);
+  // 첫 이미지를 상단 메인으로 쓰더라도 상세 갤러리에서는 모든 이미지를 그대로 노출.
+  const galleryImages = product.images;
 
   return (
     <>
@@ -168,12 +168,12 @@ export default function LandingHeroDealClient({
             </button>
 
             {product.thumbnail && (
-              <div className="relative aspect-[16/9] w-full overflow-hidden sm:rounded-t-3xl">
+              <div className="w-full overflow-hidden bg-neutral-100 sm:rounded-t-3xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={product.thumbnail}
                   alt={product.destination}
-                  className="h-full w-full object-cover"
+                  className="w-full"
                 />
               </div>
             )}
