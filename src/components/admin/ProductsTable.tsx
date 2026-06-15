@@ -1,4 +1,4 @@
-// 어드민 상품 목록 테이블 — 체크박스 선택·전체선택·일괄 삭제·개별 삭제 + 행 클릭으로 상세 이동.
+// 어드민 상품 목록 테이블 — 체크박스 선택·전체선택·일괄 삭제·개별 삭제 + 행 클릭으로 상세 이동 + 메인노출(특가/랜딩) 토글.
 "use client";
 
 import Link from "next/link";
@@ -23,11 +23,21 @@ export type ProductRow = {
   createdAtText: string;
 };
 
+const MAX_FEATURED = 3;
+
 function formatPrice(price: number) {
   return new Intl.NumberFormat("ko-KR").format(price);
 }
 
-export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
+export default function ProductsTable({
+  rows,
+  initialFeaturedIds,
+  initialLandingId,
+}: {
+  rows: ProductRow[];
+  initialFeaturedIds: string[];
+  initialLandingId: string;
+}) {
   const router = useRouter();
   // 삭제 직후 즉시 행을 사라지게 하려면 optimistic 로컬 state 유지.
   // 서버 props가 갱신되면 다시 동기화.
@@ -41,6 +51,69 @@ export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [error, setError] = useState("");
   const [, startTransition] = useTransition();
+
+  // 메인 노출 상태 (특가 최대 3개 / 랜딩 1개) — 토글 시 낙관적 업데이트 후 PATCH.
+  const [featuredIds, setFeaturedIds] = useState<string[]>(initialFeaturedIds);
+  const [landingId, setLandingId] = useState<string>(initialLandingId);
+  const [featureBusy, setFeatureBusy] = useState(false);
+  const [featureError, setFeatureError] = useState("");
+
+  useEffect(() => {
+    setFeaturedIds(initialFeaturedIds);
+  }, [initialFeaturedIds]);
+  useEffect(() => {
+    setLandingId(initialLandingId);
+  }, [initialLandingId]);
+
+  async function patchFeatured(payload: {
+    featuredProductIds?: string[];
+    landingProductId?: string | null;
+  }) {
+    setFeatureError("");
+    setFeatureBusy(true);
+    const res = await fetch("/api/admin/featured-products", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setFeatureBusy(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setFeatureError(data.error ?? "설정에 실패했습니다.");
+      return false;
+    }
+    startTransition(() => router.refresh());
+    return true;
+  }
+
+  async function toggleFeatured(id: string) {
+    if (featureBusy) return;
+    const isOn = featuredIds.includes(id);
+    let next: string[];
+    if (isOn) {
+      next = featuredIds.filter((x) => x !== id);
+    } else {
+      if (featuredIds.length >= MAX_FEATURED) {
+        setFeatureError(`특가 상품은 최대 ${MAX_FEATURED}개까지 선택할 수 있습니다.`);
+        return;
+      }
+      next = [...featuredIds, id];
+    }
+    const prev = featuredIds;
+    setFeaturedIds(next);
+    const ok = await patchFeatured({ featuredProductIds: next });
+    if (!ok) setFeaturedIds(prev);
+  }
+
+  async function toggleLanding(id: string) {
+    if (featureBusy) return;
+    const isOn = landingId === id;
+    const next = isOn ? "" : id;
+    const prev = landingId;
+    setLandingId(next);
+    const ok = await patchFeatured({ landingProductId: next });
+    if (!ok) setLandingId(prev);
+  }
 
   const selectableIds = useMemo(
     () => localRows.filter((r) => r.activeBookings === 0).map((r) => r.id),
@@ -139,6 +212,23 @@ export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
 
   return (
     <div className="mt-6 space-y-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3">
+        <span className="text-sm font-bold text-neutral-800">
+          메인 노출 설정
+        </span>
+        <span className="inline-flex items-center gap-1 text-sm text-neutral-600">
+          <span className="inline-block h-2 w-2 rounded-full bg-warm-500" />
+          특가 {featuredIds.length}/{MAX_FEATURED}
+        </span>
+        <span className="inline-flex items-center gap-1 text-sm text-neutral-600">
+          <span className="inline-block h-2 w-2 rounded-full bg-brand-500" />
+          랜딩 {landingId ? "1" : "0"}/1
+        </span>
+        {featureError && (
+          <p className="text-sm font-medium text-red-600">{featureError}</p>
+        )}
+      </div>
+
       {(selected.size > 0 || error) && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-neutral-200 bg-warm-50/50 px-4 py-3">
           <span className="text-sm font-bold text-neutral-800">
@@ -193,6 +283,9 @@ export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
               <th className="px-4 py-3 text-left font-bold">미디어</th>
               <th className="px-4 py-3 text-left font-bold">예약</th>
               <th className="px-4 py-3 text-left font-bold whitespace-nowrap">
+                메인 노출
+              </th>
+              <th className="px-4 py-3 text-left font-bold whitespace-nowrap">
                 등록일시
               </th>
               <th className="px-4 py-3 text-right font-bold">관리</th>
@@ -202,6 +295,10 @@ export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
             {localRows.map((p) => {
               const deletable = p.activeBookings === 0;
               const checked = selected.has(p.id);
+              const isFeatured = featuredIds.includes(p.id);
+              const isLanding = landingId === p.id;
+              const featuredDisabled =
+                featureBusy || (!isFeatured && featuredIds.length >= MAX_FEATURED);
               return (
                 <tr key={p.id} className="border-b border-neutral-100">
                   <td className="px-3 py-3 text-center">
@@ -256,6 +353,44 @@ export default function ProductsTable({ rows }: { rows: ProductRow[] }) {
                         (취소 {p.cancelledBookings})
                       </span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex flex-col gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => toggleFeatured(p.id)}
+                        disabled={featuredDisabled}
+                        title={
+                          isFeatured
+                            ? "특가 해제"
+                            : featuredDisabled
+                              ? `최대 ${MAX_FEATURED}개까지 선택 가능`
+                              : "특가로 설정"
+                        }
+                        className={[
+                          "inline-flex h-8 items-center justify-center rounded-lg px-3 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                          isFeatured
+                            ? "bg-warm-500 text-white hover:bg-warm-600"
+                            : "border border-warm-300 text-warm-700 hover:bg-warm-50",
+                        ].join(" ")}
+                      >
+                        {isFeatured ? "✓ 특가" : "특가"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleLanding(p.id)}
+                        disabled={featureBusy}
+                        title={isLanding ? "랜딩 해제" : "랜딩 초특가로 설정"}
+                        className={[
+                          "inline-flex h-8 items-center justify-center rounded-lg px-3 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                          isLanding
+                            ? "bg-brand-500 text-white hover:bg-brand-600"
+                            : "border border-brand-300 text-brand-700 hover:bg-brand-50",
+                        ].join(" ")}
+                      >
+                        {isLanding ? "✓ 랜딩" : "랜딩"}
+                      </button>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-neutral-500 whitespace-nowrap text-sm">
                     {p.createdAtText}

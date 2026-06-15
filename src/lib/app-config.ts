@@ -24,6 +24,10 @@ export const APP_CONFIG_KEYS = {
   bandConnectedAt: "bandConnectedAt",
   // 빠른등록 본문 차단어(줄 단위 newline 구분). null=미설정→기본값 사용, ""=명시적으로 비움→차단 없음.
   bodyBlocklist: "bodyBlocklist",
+  // 메인 플로팅 배너 특가 상품 ID들(쉼표 구분, 최대 3개). 빈 문자열/없음=기본 정렬 사용.
+  featuredProductIds: "featuredProductIds",
+  // 메인 상단 랜딩 초특가 상품 ID(단일). 빈 문자열/없음=비노출.
+  landingProductId: "landingProductId",
 } as const;
 
 export type AppConfigKey = (typeof APP_CONFIG_KEYS)[keyof typeof APP_CONFIG_KEYS];

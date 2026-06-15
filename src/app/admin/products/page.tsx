@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import ProductsTable, { type ProductRow } from "@/components/admin/ProductsTable";
 import { formatDateKST, formatDateTimeKST } from "@/lib/format-datetime";
+import { APP_CONFIG_KEYS, getConfigMany } from "@/lib/app-config";
 
 type Filter = "all" | "auto" | "manual";
 
@@ -28,7 +29,7 @@ export default async function AdminProductsPage({
         : {};
 
   // 최근 등록(자동크롤·빠른등록 무관) 순으로 위에 노출.
-  const [products, autoCount, manualCount, totalCount] = await Promise.all([
+  const [products, autoCount, manualCount, totalCount, featuredCfg] = await Promise.all([
     prisma.product.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -40,7 +41,17 @@ export default async function AdminProductsPage({
     prisma.product.count({ where: { autoImported: true } }),
     prisma.product.count({ where: { autoImported: false } }),
     prisma.product.count(),
+    getConfigMany([
+      APP_CONFIG_KEYS.featuredProductIds,
+      APP_CONFIG_KEYS.landingProductId,
+    ]),
   ]);
+
+  const initialFeaturedIds = (featuredCfg.featuredProductIds ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const initialLandingId = featuredCfg.landingProductId ?? "";
 
   const rows: ProductRow[] = products.map((p) => {
     const totalBookings = p.bookings.length;
@@ -104,7 +115,11 @@ export default async function AdminProductsPage({
           </p>
         </div>
       ) : (
-        <ProductsTable rows={rows} />
+        <ProductsTable
+          rows={rows}
+          initialFeaturedIds={initialFeaturedIds}
+          initialLandingId={initialLandingId}
+        />
       )}
     </div>
   );
