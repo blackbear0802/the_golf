@@ -47,7 +47,10 @@ export default async function FloatingDeals() {
                 href={`/products/${p.id}`}
                 className="block rounded-xl p-3 transition-colors hover:bg-warm-50"
               >
-                <p className="text-base font-bold text-neutral-900 leading-snug">
+                <span className="inline-flex items-center rounded-full bg-brand-500 px-2 py-0.5 text-xs font-black text-white shadow-sm">
+                  ✓ 올포함
+                </span>
+                <p className="mt-1 text-base font-bold text-neutral-900 leading-snug">
                   {p.destination}
                 </p>
                 <p className="mt-0.5 text-sm text-neutral-600 truncate">
@@ -55,7 +58,7 @@ export default async function FloatingDeals() {
                 </p>
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-sm text-neutral-500">
-                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박
+                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박{p.nights + 1}일
                   </span>
                   <span className="text-lg font-black text-warm-600">
                     {formatPrice(p.price)}원
@@ -67,8 +70,8 @@ export default async function FloatingDeals() {
         </ul>
       </aside>
 
-      <aside className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t-2 border-warm-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between px-4 py-2">
+      <aside className="lg:hidden border-b-2 border-warm-200 bg-white">
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <p className="text-base font-black text-warm-600">{featuredIds.length > 0 ? "🔥 이번주 특가" : "🔥 지금 인기 투어"}</p>
         </div>
         <ul className="flex gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory">
@@ -78,7 +81,10 @@ export default async function FloatingDeals() {
                 href={`/products/${p.id}`}
                 className="block rounded-xl border-2 border-warm-100 bg-warm-50 p-3"
               >
-                <p className="text-base font-bold text-neutral-900 truncate">
+                <span className="inline-flex items-center rounded-full bg-brand-500 px-2 py-0.5 text-xs font-black text-white shadow-sm">
+                  ✓ 올포함
+                </span>
+                <p className="mt-1 text-base font-bold text-neutral-900 truncate">
                   {p.destination}
                 </p>
                 <p className="mt-0.5 text-sm text-neutral-600 truncate">
@@ -86,7 +92,7 @@ export default async function FloatingDeals() {
                 </p>
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-xs text-neutral-500">
-                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박
+                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박{p.nights + 1}일
                   </span>
                   <span className="text-base font-black text-warm-600">
                     {formatPrice(p.price)}원
