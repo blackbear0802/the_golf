@@ -387,7 +387,7 @@ function Stat({
       <dt className="text-xs font-bold text-neutral-500">{label}</dt>
       <dd
         className={[
-          "mt-0.5 text-base md:text-lg font-black whitespace-nowrap",
+          "mt-0.5 text-base md:text-lg font-black break-keep",
           highlight ? "text-brand-600" : "text-neutral-900",
         ].join(" ")}
       >
