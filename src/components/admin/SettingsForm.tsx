@@ -132,8 +132,8 @@ export default function SettingsForm({ initial }: { initial: SettingsInitial }) 
           onChange={(e) => update("bodyBlocklist", e.target.value)}
           placeholder={
             initial.bodyBlocklistUnset
-              ? "문의\n위더스골프\n\n(미설정 — 위 기본값이 적용 중. 저장하면 입력한 목록으로 대체됩니다.)"
-              : "문의\n위더스골프"
+              ? "담당자\n문의하기\n문의\n위더스골프\n\n(미설정 — 위 기본값이 적용 중. 저장하면 입력한 목록으로 대체됩니다.)"
+              : "담당자\n문의하기\n문의\n위더스골프"
           }
           className="block w-full rounded-xl border-2 border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-warm-500 focus:outline-none font-mono"
         />

@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { loadOperators } from "@/lib/contact-replacer";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import StepIndicator from "@/components/StepIndicator";
@@ -35,12 +36,13 @@ export default async function BookingPage({
     redirect(`/login?callbackUrl=/booking/${id}`);
   }
 
-  const [product, user] = await Promise.all([
+  const [product, user, operators] = await Promise.all([
     prisma.product.findUnique({ where: { id } }),
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { name: true, email: true, phone: true },
     }),
+    loadOperators(),
   ]);
   if (!product) notFound();
 
@@ -83,6 +85,28 @@ export default async function BookingPage({
                   1인 {formatPrice(product.price)}원
                 </span>
               </div>
+
+              {operators.length > 0 && (
+                <div className="mt-4 border-t border-warm-200 pt-4">
+                  <p className="text-base font-bold text-warm-700">담당자</p>
+                  <ul className="mt-2 space-y-1">
+                    {operators.map((op) => (
+                      <li
+                        key={`${op.name}-${op.phone}`}
+                        className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-base text-neutral-800"
+                      >
+                        <span className="font-bold text-neutral-900">{op.name}</span>
+                        <a
+                          href={`tel:${op.phone.replace(/[^0-9+]/g, "")}`}
+                          className="font-medium text-warm-700 hover:underline"
+                        >
+                          {op.phone}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <BookingForm

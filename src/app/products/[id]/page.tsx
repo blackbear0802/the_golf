@@ -5,6 +5,28 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { stripContacts } from "@/lib/contact-replacer";
 import { cleanPostText } from "@/lib/clean-post-text";
+import { APP_CONFIG_KEYS, getConfig } from "@/lib/app-config";
+
+// 본문 표시 시점에 담당자/문의 줄을 제거하는 안전망.
+// 빠른등록·자동크롤 모두 일관 적용. 어드민 차단어(bodyBlocklist) 설정을 따른다.
+const DEFAULT_DISPLAY_BLOCKLIST = ["담당자", "문의하기", "문의", "위더스골프"];
+
+async function loadDisplayBlocklist(): Promise<string[]> {
+  const raw = await getConfig(APP_CONFIG_KEYS.bodyBlocklist);
+  if (raw === null) return DEFAULT_DISPLAY_BLOCKLIST;
+  return raw.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
+function applyBlocklist(text: string, terms: string[]): string {
+  if (!terms.length) return text;
+  return text
+    .split("\n")
+    .filter((line) => !terms.some((term) => line.includes(term)))
+    .join("\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -128,14 +150,28 @@ export default async function ProductDetailPage({
     .slice()
     .sort((a, b) => a.order - b.order);
   const youtubeVideos = product.media.filter((m) => m.type === "youtube");
-  // 빠른등록(autoImported=false)은 쓰기 시점에 본문이 이미 정제됐고 담당자 정보를 의도적으로 포함하므로
-  // 표시 단계의 stripContacts(안전망)를 건너뛴다. 밴드 크롤(autoImported=true) 본문은 그대로 안전망 적용.
+  // 담당자/연락처는 예약 화면에서만 노출. 표시 단계 안전망:
+  // 1) cleanPostText로 노이즈 제거 → 2) 차단어 줄 통째 제거 → 3) stripContacts로 잔여 연락처 strip.
+  const displayBlocklist = await loadDisplayBlocklist();
   const bodyText = product.rawText
-    ? (product.autoImported
-        ? stripContacts(cleanPostText(product.rawText))
-        : cleanPostText(product.rawText)
+    ? stripContacts(
+        applyBlocklist(cleanPostText(product.rawText), displayBlocklist)
       ).trim()
     : "";
+
+  // 포함/불포함 항목에서도 담당자·연락처 라인을 안전망으로 제거(기존 등록분 호환).
+  // "담당:" prefix는 차단어 "담당자"로는 안 잡혀 별도 처리.
+  const filterListItems = (items: string[]): string[] =>
+    items
+      .map((s) => stripContacts(s).trim())
+      .filter(
+        (s) =>
+          s.length > 0 &&
+          !/^담당\s*[:\-]/.test(s) &&
+          !displayBlocklist.some((term) => s.includes(term))
+      );
+  const includedDisplay = filterListItems(product.included);
+  const excludedDisplay = filterListItems(product.excluded);
 
   return (
     <>
@@ -258,7 +294,7 @@ export default async function ProductDetailPage({
                 포함 사항
               </h2>
               <ul className="mt-5 space-y-3">
-                {product.included.map((item) => (
+                {includedDisplay.map((item) => (
                   <li key={item} className="flex items-start gap-3 text-lg text-neutral-800">
                     <span className="mt-0.5 text-warm-600">
                       <CheckIcon />
@@ -274,7 +310,7 @@ export default async function ProductDetailPage({
                 불포함 사항
               </h2>
               <ul className="mt-5 space-y-3">
-                {product.excluded.map((item) => (
+                {excludedDisplay.map((item) => (
                   <li key={item} className="flex items-start gap-3 text-lg text-neutral-700">
                     <span className="mt-0.5 text-neutral-500">
                       <XIcon />
