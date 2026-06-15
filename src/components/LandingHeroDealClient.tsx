@@ -48,6 +48,7 @@ export default function LandingHeroDealClient({
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const [showAuthChoice, setShowAuthChoice] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // ESC로 닫기 + 본문 스크롤 잠금.
   useEffect(() => {
@@ -65,7 +66,10 @@ export default function LandingHeroDealClient({
   }, [open]);
 
   useEffect(() => {
-    if (!open) setShowAuthChoice(false);
+    if (!open) {
+      setShowAuthChoice(false);
+      setCopied(false);
+    }
   }, [open]);
 
   function handleBook() {
@@ -87,6 +91,29 @@ export default function LandingHeroDealClient({
   function goRegister() {
     const target = `/booking/${product.id}`;
     router.push(`/register?callbackUrl=${encodeURIComponent(target)}`);
+  }
+
+  // 랜딩페이지(홈) 주소를 클립보드에 복사. 보안 컨텍스트가 아니면 execCommand로 폴백.
+  async function handleShare() {
+    const url = `${window.location.origin}/`;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("아래 주소를 복사하세요", url);
+    }
   }
 
   // 첫 이미지를 상단 메인으로 쓰더라도 상세 갤러리에서는 모든 이미지를 그대로 노출.
@@ -367,6 +394,36 @@ export default function LandingHeroDealClient({
               </div>
             </div>
           </div>
+
+          {/* 우측 플로팅 공유 버튼 — 랜딩페이지 주소 복사 */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShare();
+            }}
+            aria-label="랜딩페이지 주소 복사"
+            className={[
+              "fixed right-3 top-1/2 z-[60] flex -translate-y-1/2 flex-col items-center gap-1 rounded-full px-3 py-4 text-white shadow-xl transition-colors sm:right-5",
+              copied ? "bg-emerald-500" : "bg-brand-500 hover:bg-brand-600",
+            ].join(" ")}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="h-6 w-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
+              />
+            </svg>
+            <span className="text-xs font-black">{copied ? "복사됨" : "공유"}</span>
+          </button>
         </div>
       )}
     </>
