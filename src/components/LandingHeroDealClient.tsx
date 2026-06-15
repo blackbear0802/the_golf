@@ -140,9 +140,14 @@ export default function LandingHeroDealClient({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <span className="inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-xs font-black text-brand-700 md:text-sm">
-                  ⚡ 오늘의 초특가
-                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-xs font-black text-brand-700 md:text-sm">
+                    ⚡ 오늘의 초특가
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-brand-500 px-3 py-1 text-xs font-black text-white shadow-sm md:text-sm">
+                    ✓ 올포함
+                  </span>
+                </div>
                 <h2 className="mt-2 text-xl md:text-2xl font-black text-neutral-900 leading-snug">
                   {product.destination}
                 </h2>
@@ -154,7 +159,7 @@ export default function LandingHeroDealClient({
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600 md:text-base">
                   <span>{product.departureDateText}</span>
                   <span>·</span>
-                  <span>{product.nights}박</span>
+                  <span>{product.nights}박{product.nights + 1}일</span>
                 </div>
               </div>
               <div className="flex flex-row items-baseline justify-between gap-3 md:flex-col md:items-end md:gap-1">
@@ -206,9 +211,14 @@ export default function LandingHeroDealClient({
             )}
 
             <div className="px-5 py-6 md:px-8 md:py-8">
-              <span className="inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-sm font-black text-brand-700">
-                ⚡ 오늘의 초특가
-              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-sm font-black text-brand-700">
+                  ⚡ 오늘의 초특가
+                </span>
+                <span className="inline-flex items-center rounded-full bg-brand-500 px-3 py-1 text-sm font-black text-white shadow-sm">
+                  ✓ 올포함
+                </span>
+              </div>
               <h2 className="mt-3 text-2xl md:text-3xl font-black text-neutral-900 leading-tight">
                 {product.destination}
               </h2>
@@ -220,7 +230,7 @@ export default function LandingHeroDealClient({
 
               <dl className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-neutral-50 p-4 md:grid-cols-4">
                 <Stat label="출발" value={product.departureDateText} />
-                <Stat label="기간" value={`${product.nights}박`} />
+                <Stat label="기간" value={`${product.nights}박${product.nights + 1}일`} />
                 <Stat
                   label="정원"
                   value={product.capacityLabel ?? (product.capacity > 0 ? `${product.capacity}명` : "—")}

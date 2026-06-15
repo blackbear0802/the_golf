@@ -47,10 +47,7 @@ export default async function FloatingDeals() {
                 href={`/products/${p.id}`}
                 className="block rounded-xl p-3 transition-colors hover:bg-warm-50"
               >
-                <span className="inline-flex items-center rounded-full bg-brand-500 px-2 py-0.5 text-xs font-black text-white shadow-sm">
-                  ✓ 올포함
-                </span>
-                <p className="mt-1 text-base font-bold text-neutral-900 leading-snug">
+                <p className="text-base font-bold text-neutral-900 leading-snug">
                   {p.destination}
                 </p>
                 <p className="mt-0.5 text-sm text-neutral-600 truncate">
@@ -58,7 +55,7 @@ export default async function FloatingDeals() {
                 </p>
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-sm text-neutral-500">
-                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박{p.nights + 1}일
+                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박
                   </span>
                   <span className="text-lg font-black text-warm-600">
                     {formatPrice(p.price)}원
@@ -81,10 +78,7 @@ export default async function FloatingDeals() {
                 href={`/products/${p.id}`}
                 className="block rounded-xl border-2 border-warm-100 bg-warm-50 p-3"
               >
-                <span className="inline-flex items-center rounded-full bg-brand-500 px-2 py-0.5 text-xs font-black text-white shadow-sm">
-                  ✓ 올포함
-                </span>
-                <p className="mt-1 text-base font-bold text-neutral-900 truncate">
+                <p className="text-base font-bold text-neutral-900 truncate">
                   {p.destination}
                 </p>
                 <p className="mt-0.5 text-sm text-neutral-600 truncate">
@@ -92,7 +86,7 @@ export default async function FloatingDeals() {
                 </p>
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-xs text-neutral-500">
-                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박{p.nights + 1}일
+                    {p.departureLabel ?? formatDate(p.departureDate)} · {p.nights}박
                   </span>
                   <span className="text-base font-black text-warm-600">
                     {formatPrice(p.price)}원
