@@ -41,7 +41,9 @@ export const SEARCH_PRODUCTS_TOOL: Anthropic.Messages.Tool = {
       },
       departureMonth: {
         type: "string",
-        description: "출발 시기. 'YYYY-MM' 형식 (예: '2026-11')",
+        description:
+          "출발 시기. 반드시 'YYYY-MM' 형식 (예: '2026-11'). " +
+          "사용자가 연도를 안 줬으면 시스템 프롬프트의 '오늘 날짜' 기준으로 가장 가까운 미래의 해당 월을 직접 추정해 채우세요. 비워두지 마세요.",
       },
       limit: {
         type: "number",
