@@ -10,14 +10,14 @@ export default function Home() {
   return (
     <>
       <Header />
-      <main className="flex-1">
-        {/* 모바일은 특가 위젯을 최상단 인플로우로, 데스크톱은 우측 고정 사이드바로 렌더 */}
-        <FloatingDeals />
-        <Hero />
+      <main className="flex-1 pb-40 lg:pb-0">
+        {/* 오늘의 초특가를 최상단에 노출 */}
         <LandingHeroDeal />
+        <Hero />
         <TrustSection />
       </main>
       <Footer />
+      <FloatingDeals />
     </>
   );
 }
