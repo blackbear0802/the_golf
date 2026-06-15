@@ -11,6 +11,9 @@ type Operator = {
   email: string;
 };
 
+type DetailImage = { id: string; url: string; caption: string | null };
+type DetailVideo = { id: string; embedUrl: string; caption: string | null };
+
 type Product = {
   id: string;
   destination: string;
@@ -21,9 +24,12 @@ type Product = {
   price: number;
   capacity: number;
   capacityLabel: string | null;
+  deadlineText: string | null;
+  bodyText: string;
   included: string[];
   excluded: string[];
-  rawText: string | null;
+  images: DetailImage[];
+  youtubeVideos: DetailVideo[];
   thumbnail: string | null;
 };
 
@@ -82,6 +88,9 @@ export default function LandingHeroDealClient({
     const target = `/booking/${product.id}`;
     router.push(`/register?callbackUrl=${encodeURIComponent(target)}`);
   }
+
+  // 모달 상단 히어로로 쓰는 대표 이미지는 갤러리에서 제외해 중복 노출 방지.
+  const galleryImages = product.images.filter((img) => img.url !== product.thumbnail);
 
   return (
     <>
@@ -195,6 +204,65 @@ export default function LandingHeroDealClient({
                   highlight
                 />
               </dl>
+
+              {product.deadlineText && (
+                <p className="mt-4 inline-block rounded-full bg-brand-50 px-4 py-2 text-sm font-bold text-brand-700">
+                  ⏰ 모집 마감 {product.deadlineText}
+                </p>
+              )}
+
+              {product.bodyText && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-black text-neutral-900">상세 안내</h3>
+                  <p className="mt-2 whitespace-pre-wrap text-base leading-relaxed text-neutral-800">
+                    {product.bodyText}
+                  </p>
+                </div>
+              )}
+
+              {galleryImages.length > 0 && (
+                <div className="mt-6 space-y-4">
+                  {galleryImages.map((img) => (
+                    <figure key={img.id}>
+                      {img.caption && (
+                        <figcaption className="mb-2 text-sm font-medium text-neutral-700">
+                          {img.caption}
+                        </figcaption>
+                      )}
+                      <div className="overflow-hidden rounded-2xl bg-neutral-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.url}
+                          alt={img.caption ?? product.destination}
+                          className="w-full"
+                        />
+                      </div>
+                    </figure>
+                  ))}
+                </div>
+              )}
+
+              {product.youtubeVideos.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-black text-neutral-900">소개 영상</h3>
+                  <div className="mt-3 space-y-4">
+                    {product.youtubeVideos.map((v) => (
+                      <div
+                        key={v.id}
+                        className="aspect-video w-full overflow-hidden rounded-2xl bg-black"
+                      >
+                        <iframe
+                          src={v.embedUrl}
+                          title={v.caption ?? "소개 영상"}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="h-full w-full"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {product.included.length > 0 && (
                 <div className="mt-5">
