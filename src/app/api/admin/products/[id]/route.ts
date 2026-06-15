@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseProductInput } from "@/lib/admin-product";
+import { loadProtectedProductIds } from "@/lib/featured-config";
 
 export async function PATCH(
   req: Request,
@@ -40,6 +41,16 @@ export async function DELETE(
   }
 
   const { id } = await params;
+
+  // 특가/랜딩으로 지정된 상품은 삭제 불가 (먼저 지정 해제해야 함)
+  const protectedIds = await loadProtectedProductIds();
+  if (protectedIds.all.has(id)) {
+    const role = protectedIds.landing === id ? "랜딩" : "특가";
+    return NextResponse.json(
+      { error: `${role}으로 지정된 상품입니다. 먼저 지정을 해제한 뒤 삭제해주세요.` },
+      { status: 409 }
+    );
+  }
 
   // 취소되지 않은(활성) 예약이 1건이라도 있으면 삭제 불가
   const activeBookingCount = await prisma.booking.count({
