@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseProductInput } from "@/lib/admin-product";
+import { loadProtectedProductIds } from "@/lib/featured-config";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -49,11 +50,17 @@ export async function DELETE(req: Request) {
     if (g.productId) activeMap.set(g.productId, g._count._all);
   }
 
+  // 특가/랜딩 지정 상품은 삭제 대상에서 제외 (먼저 지정 해제 필요)
+  const protectedIds = await loadProtectedProductIds();
+
   const deletable: string[] = [];
   const skipped: { id: string; reason: string }[] = [];
   for (const id of ids) {
     const active = activeMap.get(id) ?? 0;
-    if (active > 0) {
+    if (protectedIds.all.has(id)) {
+      const role = protectedIds.landing === id ? "랜딩" : "특가";
+      skipped.push({ id, reason: `${role} 지정 상품 (지정 해제 후 삭제)` });
+    } else if (active > 0) {
       skipped.push({ id, reason: `활성 예약 ${active}건` });
     } else {
       deletable.push(id);

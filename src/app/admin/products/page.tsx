@@ -47,11 +47,26 @@ export default async function AdminProductsPage({
     ]),
   ]);
 
-  const initialFeaturedIds = (featuredCfg.featuredProductIds ?? "")
+  const rawFeaturedIds = (featuredCfg.featuredProductIds ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  const initialLandingId = featuredCfg.landingProductId ?? "";
+  const rawLandingId = featuredCfg.landingProductId ?? "";
+
+  // 삭제된 상품 id가 설정에 남아 개수가 부풀려지는 것을 방지 — 실제 존재하는 상품만 반영.
+  const referencedIds = [...rawFeaturedIds, rawLandingId].filter(Boolean);
+  const existingIds = referencedIds.length
+    ? new Set(
+        (
+          await prisma.product.findMany({
+            where: { id: { in: referencedIds } },
+            select: { id: true },
+          })
+        ).map((p) => p.id)
+      )
+    : new Set<string>();
+  const initialFeaturedIds = rawFeaturedIds.filter((id) => existingIds.has(id));
+  const initialLandingId = existingIds.has(rawLandingId) ? rawLandingId : "";
 
   const rows: ProductRow[] = products.map((p) => {
     const totalBookings = p.bookings.length;
