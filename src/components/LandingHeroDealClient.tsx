@@ -72,6 +72,12 @@ export default function LandingHeroDealClient({
     }
   }, [open]);
 
+  // 공유 링크(?deal=...)로 진입하면 팝업을 자동으로 연다.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("deal")) setOpen(true);
+  }, []);
+
   function handleBook() {
     const target = `/booking/${product.id}`;
     if (status === "loading") return;
@@ -93,9 +99,9 @@ export default function LandingHeroDealClient({
     router.push(`/register?callbackUrl=${encodeURIComponent(target)}`);
   }
 
-  // 랜딩페이지(홈) 주소를 클립보드에 복사. 보안 컨텍스트가 아니면 execCommand로 폴백.
+  // 팝업이 바로 열리는 전용 주소(?deal=상품id)를 클립보드에 복사. 비보안 컨텍스트는 execCommand로 폴백.
   async function handleShare() {
-    const url = `${window.location.origin}/`;
+    const url = `${window.location.origin}/?deal=${product.id}`;
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(url);
