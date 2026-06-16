@@ -20,11 +20,11 @@ const SITE_URL =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "더 골프 — 시니어 맞춤 골프 투어",
+    default: "더 골프 — 맞춤 골프 투어",
     template: "%s | 더 골프",
   },
   description:
-    "AI가 골라드리는 시니어 맞춤형 골프 투어 패키지. 전문 상담원이 24시간 내 연락드립니다.",
+    "AI가 골라드리는 맞춤 골프 투어 패키지. 전문 상담원이 24시간 내 연락드립니다.",
   applicationName: "더 골프",
   authors: [{ name: "더 골프" }],
   openGraph: {
@@ -32,15 +32,15 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     siteName: "더 골프",
     url: SITE_URL,
-    title: "더 골프 — 시니어 맞춤 골프 투어",
+    title: "더 골프 — 맞춤 골프 투어",
     description:
-      "AI가 골라드리는 시니어 맞춤형 골프 투어 패키지. 전문 상담원이 24시간 내 연락드립니다.",
+      "AI가 골라드리는 맞춤 골프 투어 패키지. 전문 상담원이 24시간 내 연락드립니다.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "더 골프 — 시니어 맞춤 골프 투어",
+    title: "더 골프 — 맞춤 골프 투어",
     description:
-      "AI가 골라드리는 시니어 맞춤형 골프 투어 패키지. 전문 상담원이 24시간 내 연락드립니다.",
+      "AI가 골라드리는 맞춤 골프 투어 패키지. 전문 상담원이 24시간 내 연락드립니다.",
   },
   robots: {
     index: true,

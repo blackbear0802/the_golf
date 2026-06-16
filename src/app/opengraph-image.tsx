@@ -2,7 +2,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "nodejs";
-export const alt = "더 골프 — 시니어 맞춤 골프 투어";
+export const alt = "더 골프 — 맞춤 골프 투어";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -49,7 +49,7 @@ export default async function Image() {
               letterSpacing: -2,
             }}
           >
-            <div style={{ display: "flex" }}>시니어 맞춤</div>
+            <div style={{ display: "flex" }}>맞춤</div>
             <div style={{ display: "flex" }}>골프 투어 패키지</div>
           </div>
           <div
