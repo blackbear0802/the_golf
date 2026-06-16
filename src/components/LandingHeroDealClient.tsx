@@ -146,11 +146,11 @@ export default function LandingHeroDealClient({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-xs font-black text-brand-700 md:text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-brand-100 px-3.5 py-1.5 text-sm font-black text-brand-700 md:text-base">
                     ⚡ 오늘의 초특가
                   </span>
-                  <span className="inline-flex items-center rounded-full bg-brand-500 px-3 py-1 text-xs font-black text-white shadow-sm md:text-sm">
+                  <span className="inline-flex items-center rounded-full bg-brand-500 px-4 py-1.5 text-base font-black text-white shadow-sm md:text-lg">
                     ✓ 올포함
                   </span>
                 </div>
@@ -247,11 +247,11 @@ export default function LandingHeroDealClient({
             )}
 
             <div className="px-5 py-6 md:px-8 md:py-8">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-sm font-black text-brand-700">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-full bg-brand-100 px-4 py-1.5 text-base font-black text-brand-700 md:text-lg">
                   ⚡ 오늘의 초특가
                 </span>
-                <span className="inline-flex items-center rounded-full bg-brand-500 px-3 py-1 text-sm font-black text-white shadow-sm">
+                <span className="inline-flex items-center rounded-full bg-brand-500 px-4 py-2 text-lg font-black text-white shadow-sm md:text-xl">
                   ✓ 올포함
                 </span>
               </div>
