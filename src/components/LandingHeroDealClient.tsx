@@ -199,6 +199,36 @@ export default function LandingHeroDealClient({
               ×
             </button>
 
+            {/* 팝업 우측 상단 공유 버튼 (닫기 아래) — 랜딩페이지 주소 복사 */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShare();
+              }}
+              aria-label="랜딩페이지 주소 복사"
+              className={[
+                "absolute right-4 top-16 z-10 flex h-10 items-center gap-1 rounded-full px-3 font-black text-white shadow-lg transition-colors",
+                copied ? "bg-emerald-500" : "bg-brand-500 hover:bg-brand-600",
+              ].join(" ")}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="h-5 w-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
+                />
+              </svg>
+              <span className="text-xs">{copied ? "복사됨" : "공유"}</span>
+            </button>
+
             {product.thumbnail && (
               <div className="w-full overflow-hidden bg-neutral-100 sm:rounded-t-3xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -404,36 +434,6 @@ export default function LandingHeroDealClient({
               </div>
             </div>
           </div>
-
-          {/* 우측 플로팅 공유 버튼 — 랜딩페이지 주소 복사 */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleShare();
-            }}
-            aria-label="랜딩페이지 주소 복사"
-            className={[
-              "fixed right-3 top-1/2 z-[60] flex -translate-y-1/2 flex-col items-center gap-1 rounded-full px-3 py-4 text-white shadow-xl transition-colors sm:right-5",
-              copied ? "bg-emerald-500" : "bg-brand-500 hover:bg-brand-600",
-            ].join(" ")}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
-              />
-            </svg>
-            <span className="text-xs font-black">{copied ? "복사됨" : "공유"}</span>
-          </button>
         </div>
       )}
     </>
