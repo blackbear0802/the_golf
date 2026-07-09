@@ -32,6 +32,7 @@ export default async function AdminLayout({
         <nav className="grid grid-cols-3 gap-1 px-3 pb-3 md:grid-cols-1 md:gap-0 md:px-0 md:pb-0">
           <SideLink href="/admin" label="대시보드" />
           <SideLink href="/admin/bookings" label="예약 관리" />
+          <SideLink href="/admin/members" label="회원 관리" />
           <SideLink href="/admin/products" label="상품 관리" />
           <SideLink href="/admin/settings" label="설정" />
         </nav>

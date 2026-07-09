@@ -29,6 +29,8 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
         if (!user || !user.passwordHash) return null;
+        // 탈퇴(소프트 삭제) 회원은 로그인 차단.
+        if (user.deletedAt) return null;
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!valid) return null;

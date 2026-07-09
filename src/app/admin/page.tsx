@@ -39,7 +39,7 @@ export default async function AdminDashboard() {
     prisma.booking.count(),
     prisma.booking.count({ where: { status: "pending" } }),
     prisma.booking.count({ where: { status: "confirmed" } }),
-    prisma.user.count(),
+    prisma.user.count({ where: { deletedAt: null } }),
     prisma.product.count(),
     prisma.product.count({ where: { autoImported: true } }),
     prisma.booking.findMany({
