@@ -25,6 +25,10 @@
 - [x] `npx tsc --noEmit` 통과
 - [x] `npm run lint` — 내 파일 무결(기존 chat 컴포넌트 오류만 잔존, 이번 작업과 무관)
 
-## 후속(미착수)
-- [ ] 탈퇴 회원 이메일 재가입 충돌 처리
-- [ ] 회원 목록 페이지네이션
+## 후속 (완료)
+- [x] 탈퇴 회원 이메일 재가입 충돌 처리 (소프트 삭제 시 email tombstone → unique 슬롯 해제, 복구 시 원본 회수·충돌 알림)
+- [x] 회원 목록 페이지네이션 (PAGE_SIZE=20, skip/take + count, 이전/다음 컨트롤, q·status 유지)
+
+## 후속 검증
+- [x] `npx tsc --noEmit` 통과
+- [x] `npm run build` exit 0

@@ -27,11 +27,12 @@ export default function MemberDeleteButton({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ restore: deleted }),
     });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
       setError(data.error ?? "처리 실패");
       return;
     }
+    if (data.warning) alert(data.warning);
     startTransition(() => router.refresh());
   }
 

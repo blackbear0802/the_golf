@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDateTimeKST, formatDateKST } from "@/lib/format-datetime";
+import { baseEmail } from "@/lib/member";
 import MemberRoleSelect from "@/components/admin/MemberRoleSelect";
 import MemberDeleteButton from "@/components/admin/MemberDeleteButton";
 
@@ -69,7 +70,7 @@ export default async function AdminMemberDetailPage({
       </div>
 
       <section className="mt-6 grid gap-4 rounded-2xl border border-neutral-200 bg-white p-5 sm:grid-cols-2">
-        <InfoRow label="이메일" value={user.email ?? "-"} />
+        <InfoRow label="이메일" value={baseEmail(user.email) ?? "-"} />
         <InfoRow label="전화" value={user.phone ?? "-"} />
         <InfoRow label="역할" value={user.role === "admin" ? "관리자" : "일반 회원"} />
         <InfoRow label="카카오 연동" value={user.kakaoId ? "연동됨" : "-"} />
