@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDateTimeKST, formatDateKST } from "@/lib/format-datetime";
 import { baseEmail } from "@/lib/member";
+import { genderLabel } from "@/lib/signup-options";
 import MemberRoleSelect from "@/components/admin/MemberRoleSelect";
 import MemberDeleteButton from "@/components/admin/MemberDeleteButton";
 
@@ -74,6 +75,12 @@ export default async function AdminMemberDetailPage({
         <InfoRow label="전화" value={user.phone ?? "-"} />
         <InfoRow label="역할" value={user.role === "admin" ? "관리자" : "일반 회원"} />
         <InfoRow label="카카오 연동" value={user.kakaoId ? "연동됨" : "-"} />
+        <InfoRow label="생년월일" value={user.birthDate ? formatDateKST(user.birthDate) ?? "-" : "-"} />
+        <InfoRow label="성별" value={genderLabel(user.gender) ?? "-"} />
+        <InfoRow label="골프 구력" value={user.golfCareer ?? "-"} />
+        <InfoRow label="핸디캡" value={user.handicap ?? "-"} />
+        <InfoRow label="거주 지역" value={user.region ?? "-"} />
+        <InfoRow label="마케팅 수신" value={user.marketingAgreedAt ? "동의" : "미동의"} />
         <InfoRow label="가입 완료" value={user.signupCompleted ? "완료" : "미완료"} />
         <InfoRow label="가입일" value={formatDateTimeKST(user.createdAt) ?? "-"} />
         {user.deletedAt && (

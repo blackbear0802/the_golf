@@ -25,3 +25,19 @@ export function validatePassword(password: string): string | null {
     return "비밀번호는 영문·숫자·특수문자를 모두 포함해야 합니다.";
   return null;
 }
+
+// 생년월일은 선택 항목. 값이 있을 때만 형식/범위를 검증한다. (YYYY-MM-DD)
+const BIRTH_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function validateBirthDate(birthDate: string): string | null {
+  if (!birthDate) return null;
+  if (!BIRTH_DATE_RE.test(birthDate))
+    return "올바른 생년월일 형식이 아닙니다. (예: 1970-05-26)";
+  const date = new Date(`${birthDate}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return "올바른 생년월일이 아닙니다.";
+  const year = date.getUTCFullYear();
+  const now = new Date();
+  if (date.getTime() > now.getTime()) return "생년월일이 미래일 수 없습니다.";
+  if (year < 1900) return "생년월일을 다시 확인해주세요.";
+  return null;
+}

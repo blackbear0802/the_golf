@@ -9,7 +9,14 @@ import {
   validateEmail,
   validatePhone,
   validatePassword,
+  validateBirthDate,
 } from "@/lib/validators";
+import {
+  GENDER_OPTIONS,
+  GOLF_CAREER_OPTIONS,
+  HANDICAP_OPTIONS,
+  REGION_OPTIONS,
+} from "@/lib/signup-options";
 
 // open redirect 방지: 상대 경로(/ 시작 + // 시작 아님)만 허용
 function sanitizeCallback(raw: string | null): string {
@@ -25,6 +32,8 @@ type FieldErrors = {
   phone?: string;
   password?: string;
   passwordConfirm?: string;
+  birthDate?: string;
+  terms?: string;
 };
 
 export default function RegisterPage() {
@@ -37,15 +46,41 @@ export default function RegisterPage() {
     phone: "",
     password: "",
     passwordConfirm: "",
+    birthDate: "",
+    gender: "",
+    golfCareer: "",
+    handicap: "",
+    region: "",
+  });
+  const [agree, setAgree] = useState({
+    terms: false,
+    privacy: false,
+    marketing: false,
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const agreeAll = agree.terms && agree.privacy && agree.marketing;
+
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
-    if (fieldErrors[key]) {
+    if (key in fieldErrors && fieldErrors[key as keyof FieldErrors]) {
       setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+    }
+  }
+
+  function toggleAgree(key: keyof typeof agree, value: boolean) {
+    setAgree((prev) => ({ ...prev, [key]: value }));
+    if ((key === "terms" || key === "privacy") && fieldErrors.terms) {
+      setFieldErrors((prev) => ({ ...prev, terms: undefined }));
+    }
+  }
+
+  function toggleAgreeAll(value: boolean) {
+    setAgree({ terms: value, privacy: value, marketing: value });
+    if (fieldErrors.terms) {
+      setFieldErrors((prev) => ({ ...prev, terms: undefined }));
     }
   }
 
@@ -59,6 +94,10 @@ export default function RegisterPage() {
       errors.passwordConfirm = "비밀번호를 한 번 더 입력해주세요.";
     } else if (form.password !== form.passwordConfirm) {
       errors.passwordConfirm = "비밀번호가 일치하지 않습니다.";
+    }
+    errors.birthDate = validateBirthDate(form.birthDate) ?? undefined;
+    if (!agree.terms || !agree.privacy) {
+      errors.terms = "필수 약관에 동의해주세요.";
     }
     return errors;
   }
@@ -76,8 +115,14 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const { passwordConfirm: _, ...payload } = form;
+    const { passwordConfirm: _, ...formFields } = form;
     void _;
+    const payload = {
+      ...formFields,
+      agreeTerms: agree.terms,
+      agreePrivacy: agree.privacy,
+      agreeMarketing: agree.marketing,
+    };
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -114,6 +159,9 @@ export default function RegisterPage() {
         : "border-neutral-200 focus:border-warm-500",
     ].join(" ");
   }
+
+  const selectClass =
+    "mt-2 block h-16 w-full rounded-xl border-2 border-neutral-200 bg-white px-4 text-lg text-neutral-900 focus:border-warm-500 focus:outline-none";
 
   return (
     <main className="flex flex-1 items-center justify-center bg-warm-50 px-5 py-12">
@@ -225,6 +273,164 @@ export default function RegisterPage() {
             {fieldErrors.passwordConfirm && (
               <p className="mt-1.5 text-sm font-medium text-brand-600">
                 {fieldErrors.passwordConfirm}
+              </p>
+            )}
+          </div>
+
+          <div className="border-t border-neutral-100 pt-5">
+            <p className="text-base font-bold text-neutral-800">
+              추가 정보 <span className="text-sm font-medium text-neutral-400">(선택)</span>
+            </p>
+            <p className="mt-1 text-sm text-neutral-500">
+              입력하시면 딱 맞는 골프 여행을 추천해드려요.
+            </p>
+
+            <div className="mt-4 space-y-5">
+              <div>
+                <label htmlFor="birthDate" className="block text-base font-bold text-neutral-800">
+                  생년월일
+                </label>
+                <input
+                  id="birthDate"
+                  type="date"
+                  value={form.birthDate}
+                  onChange={(e) => update("birthDate", e.target.value)}
+                  className={fieldClass(!!fieldErrors.birthDate)}
+                />
+                {fieldErrors.birthDate && (
+                  <p className="mt-1.5 text-sm font-medium text-brand-600">
+                    {fieldErrors.birthDate}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="gender" className="block text-base font-bold text-neutral-800">
+                  성별
+                </label>
+                <select
+                  id="gender"
+                  value={form.gender}
+                  onChange={(e) => update("gender", e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="">선택 안 함</option>
+                  {GENDER_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="golfCareer" className="block text-base font-bold text-neutral-800">
+                  골프 구력
+                </label>
+                <select
+                  id="golfCareer"
+                  value={form.golfCareer}
+                  onChange={(e) => update("golfCareer", e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="">선택 안 함</option>
+                  {GOLF_CAREER_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="handicap" className="block text-base font-bold text-neutral-800">
+                  핸디캡
+                </label>
+                <select
+                  id="handicap"
+                  value={form.handicap}
+                  onChange={(e) => update("handicap", e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="">선택 안 함</option>
+                  {HANDICAP_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="region" className="block text-base font-bold text-neutral-800">
+                  거주 지역
+                </label>
+                <select
+                  id="region"
+                  value={form.region}
+                  onChange={(e) => update("region", e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="">선택 안 함</option>
+                  {REGION_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-neutral-100 pt-5">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={agreeAll}
+                onChange={(e) => toggleAgreeAll(e.target.checked)}
+                className="h-6 w-6 shrink-0 accent-warm-500"
+              />
+              <span className="text-base font-bold text-neutral-900">전체 동의</span>
+            </label>
+
+            <div className="mt-3 space-y-3 border-t border-neutral-100 pt-3">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={agree.terms}
+                  onChange={(e) => toggleAgree("terms", e.target.checked)}
+                  className="h-6 w-6 shrink-0 accent-warm-500"
+                />
+                <span className="text-base text-neutral-700">
+                  <span className="font-bold text-brand-600">[필수]</span> 이용약관 동의
+                </span>
+              </label>
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={agree.privacy}
+                  onChange={(e) => toggleAgree("privacy", e.target.checked)}
+                  className="h-6 w-6 shrink-0 accent-warm-500"
+                />
+                <span className="text-base text-neutral-700">
+                  <span className="font-bold text-brand-600">[필수]</span> 개인정보 수집·이용 동의
+                </span>
+              </label>
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={agree.marketing}
+                  onChange={(e) => toggleAgree("marketing", e.target.checked)}
+                  className="h-6 w-6 shrink-0 accent-warm-500"
+                />
+                <span className="text-base text-neutral-700">
+                  <span className="font-bold text-neutral-400">[선택]</span> 마케팅 정보 수신 동의
+                </span>
+              </label>
+            </div>
+            {fieldErrors.terms && (
+              <p className="mt-2 text-sm font-medium text-brand-600">
+                {fieldErrors.terms}
               </p>
             )}
           </div>
