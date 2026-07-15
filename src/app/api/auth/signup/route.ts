@@ -27,8 +27,10 @@ export async function POST(req: Request) {
     golfCareer,
     handicap,
     region,
+    agreeAge,
     agreeTerms,
     agreePrivacy,
+    agreeThirdParty,
     agreeMarketing,
   } = await req.json();
 
@@ -46,9 +48,9 @@ export async function POST(req: Request) {
   if (passwordError)
     return NextResponse.json({ error: passwordError }, { status: 400 });
 
-  if (!agreeTerms || !agreePrivacy) {
+  if (!agreeAge || !agreeTerms || !agreePrivacy || !agreeThirdParty) {
     return NextResponse.json(
-      { error: "필수 약관에 동의해주세요." },
+      { error: "필수 항목에 모두 동의해주세요." },
       { status: 400 }
     );
   }
@@ -90,8 +92,10 @@ export async function POST(req: Request) {
       golfCareer: golfCareer || null,
       handicap: handicap || null,
       region: region || null,
+      ageVerifiedAt: now,
       termsAgreedAt: now,
       privacyAgreedAt: now,
+      thirdPartyAgreedAt: now,
       marketingAgreedAt: agreeMarketing ? now : null,
     },
   });

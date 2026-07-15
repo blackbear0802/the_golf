@@ -80,6 +80,7 @@ export default async function AdminMemberDetailPage({
         <InfoRow label="골프 구력" value={user.golfCareer ?? "-"} />
         <InfoRow label="핸디캡" value={user.handicap ?? "-"} />
         <InfoRow label="거주 지역" value={user.region ?? "-"} />
+        <InfoRow label="제3자 제공" value={user.thirdPartyAgreedAt ? "동의" : "미동의"} />
         <InfoRow label="마케팅 수신" value={user.marketingAgreedAt ? "동의" : "미동의"} />
         <InfoRow label="가입 완료" value={user.signupCompleted ? "완료" : "미완료"} />
         <InfoRow label="가입일" value={formatDateTimeKST(user.createdAt) ?? "-"} />

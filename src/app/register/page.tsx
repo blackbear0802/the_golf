@@ -54,8 +54,10 @@ export default function RegisterPage() {
     region: "",
   });
   const [agree, setAgree] = useState({
+    age: false,
     terms: false,
     privacy: false,
+    thirdParty: false,
     marketing: false,
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -63,7 +65,10 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [openTerms, setOpenTerms] = useState<Record<string, boolean>>({});
 
-  const agreeAll = agree.terms && agree.privacy && agree.marketing;
+  const agreeAll = SIGNUP_TERMS.every((t) => agree[t.key]);
+  const requiredAgreed = SIGNUP_TERMS.filter((t) => t.required).every(
+    (t) => agree[t.key]
+  );
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -74,13 +79,19 @@ export default function RegisterPage() {
 
   function toggleAgree(key: keyof typeof agree, value: boolean) {
     setAgree((prev) => ({ ...prev, [key]: value }));
-    if ((key === "terms" || key === "privacy") && fieldErrors.terms) {
+    if (fieldErrors.terms) {
       setFieldErrors((prev) => ({ ...prev, terms: undefined }));
     }
   }
 
   function toggleAgreeAll(value: boolean) {
-    setAgree({ terms: value, privacy: value, marketing: value });
+    setAgree({
+      age: value,
+      terms: value,
+      privacy: value,
+      thirdParty: value,
+      marketing: value,
+    });
     if (fieldErrors.terms) {
       setFieldErrors((prev) => ({ ...prev, terms: undefined }));
     }
@@ -98,8 +109,8 @@ export default function RegisterPage() {
       errors.passwordConfirm = "비밀번호가 일치하지 않습니다.";
     }
     errors.birthDate = validateBirthDate(form.birthDate) ?? undefined;
-    if (!agree.terms || !agree.privacy) {
-      errors.terms = "필수 약관에 동의해주세요.";
+    if (!requiredAgreed) {
+      errors.terms = "필수 항목에 모두 동의해주세요.";
     }
     return errors;
   }
@@ -121,8 +132,10 @@ export default function RegisterPage() {
     void _;
     const payload = {
       ...formFields,
+      agreeAge: agree.age,
       agreeTerms: agree.terms,
       agreePrivacy: agree.privacy,
+      agreeThirdParty: agree.thirdParty,
       agreeMarketing: agree.marketing,
     };
     const res = await fetch("/api/auth/signup", {
@@ -392,7 +405,9 @@ export default function RegisterPage() {
                 onChange={(e) => toggleAgreeAll(e.target.checked)}
                 className="h-6 w-6 shrink-0 accent-warm-500"
               />
-              <span className="text-base font-bold text-neutral-900">전체 동의</span>
+              <span className="text-base font-bold text-neutral-900">
+                thegolfer의 모든 약관 및 개인정보 처리방침에 동의합니다.
+              </span>
             </label>
 
             <div className="mt-3 space-y-3 border-t border-neutral-100 pt-3">
@@ -415,20 +430,22 @@ export default function RegisterPage() {
                         {term.label}
                       </span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenTerms((prev) => ({
-                          ...prev,
-                          [term.key]: !prev[term.key],
-                        }))
-                      }
-                      className="shrink-0 text-sm font-medium text-neutral-400 underline underline-offset-2 hover:text-neutral-600"
-                    >
-                      보기 {openTerms[term.key] ? "▴" : "▾"}
-                    </button>
+                    {term.content && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenTerms((prev) => ({
+                            ...prev,
+                            [term.key]: !prev[term.key],
+                          }))
+                        }
+                        className="shrink-0 text-sm font-medium text-neutral-400 underline underline-offset-2 hover:text-neutral-600"
+                      >
+                        보기 {openTerms[term.key] ? "▴" : "▾"}
+                      </button>
+                    )}
                   </div>
-                  {openTerms[term.key] && (
+                  {term.content && openTerms[term.key] && (
                     <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl border border-neutral-200 bg-neutral-50 p-4 font-sans text-sm leading-relaxed text-neutral-600">
                       {term.content}
                     </pre>
