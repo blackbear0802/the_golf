@@ -17,6 +17,7 @@ import {
   HANDICAP_OPTIONS,
   REGION_OPTIONS,
 } from "@/lib/signup-options";
+import { SIGNUP_TERMS } from "@/lib/terms-content";
 
 // open redirect 방지: 상대 경로(/ 시작 + // 시작 아님)만 허용
 function sanitizeCallback(raw: string | null): string {
@@ -60,6 +61,7 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [openTerms, setOpenTerms] = useState<Record<string, boolean>>({});
 
   const agreeAll = agree.terms && agree.privacy && agree.marketing;
 
@@ -394,39 +396,45 @@ export default function RegisterPage() {
             </label>
 
             <div className="mt-3 space-y-3 border-t border-neutral-100 pt-3">
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={agree.terms}
-                  onChange={(e) => toggleAgree("terms", e.target.checked)}
-                  className="h-6 w-6 shrink-0 accent-warm-500"
-                />
-                <span className="text-base text-neutral-700">
-                  <span className="font-bold text-brand-600">[필수]</span> 이용약관 동의
-                </span>
-              </label>
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={agree.privacy}
-                  onChange={(e) => toggleAgree("privacy", e.target.checked)}
-                  className="h-6 w-6 shrink-0 accent-warm-500"
-                />
-                <span className="text-base text-neutral-700">
-                  <span className="font-bold text-brand-600">[필수]</span> 개인정보 수집·이용 동의
-                </span>
-              </label>
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={agree.marketing}
-                  onChange={(e) => toggleAgree("marketing", e.target.checked)}
-                  className="h-6 w-6 shrink-0 accent-warm-500"
-                />
-                <span className="text-base text-neutral-700">
-                  <span className="font-bold text-neutral-400">[선택]</span> 마케팅 정보 수신 동의
-                </span>
-              </label>
+              {SIGNUP_TERMS.map((term) => (
+                <div key={term.key}>
+                  <div className="flex items-center gap-3">
+                    <label className="flex flex-1 items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={agree[term.key]}
+                        onChange={(e) => toggleAgree(term.key, e.target.checked)}
+                        className="h-6 w-6 shrink-0 accent-warm-500"
+                      />
+                      <span className="text-base text-neutral-700">
+                        <span
+                          className={`font-bold ${term.required ? "text-brand-600" : "text-neutral-400"}`}
+                        >
+                          {term.required ? "[필수]" : "[선택]"}
+                        </span>{" "}
+                        {term.label}
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenTerms((prev) => ({
+                          ...prev,
+                          [term.key]: !prev[term.key],
+                        }))
+                      }
+                      className="shrink-0 text-sm font-medium text-neutral-400 underline underline-offset-2 hover:text-neutral-600"
+                    >
+                      보기 {openTerms[term.key] ? "▴" : "▾"}
+                    </button>
+                  </div>
+                  {openTerms[term.key] && (
+                    <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl border border-neutral-200 bg-neutral-50 p-4 font-sans text-sm leading-relaxed text-neutral-600">
+                      {term.content}
+                    </pre>
+                  )}
+                </div>
+              ))}
             </div>
             {fieldErrors.terms && (
               <p className="mt-2 text-sm font-medium text-brand-600">
